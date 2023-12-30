@@ -1,0 +1,24 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: 'Cormorant', serif, italic;
+  background-color: #fff3e3;
+}
+
+.appear {
+  animation: appear 1s ease-in;
+}
+
+@keyframes appear {
+  0% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
+}
