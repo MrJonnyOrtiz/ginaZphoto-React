@@ -35,7 +35,7 @@ function AppLayout() {
         <p>
           Powered by{' '}
           <a
-            className=" text-blue-500 hover:underline"
+            className=" text-blue-700 hover:underline"
             href="https://cloudrealmllc.com"
             target="_blank"
             rel="noreferrer"
