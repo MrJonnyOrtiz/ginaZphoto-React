@@ -5,13 +5,18 @@ import useFadeIn from '../hooks/useFadeIn';
 
 export default function Contact() {
   const ref = useFadeIn();
-  const [formData, setFormData] = useState({ name: '', email: '', message: '' });
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    message: '',
+  });
   const [status, setStatus] = useState('idle');
   const [errorMessage, setErrorMessage] = useState('');
   const [hasCaptchaToken, setHasCaptchaToken] = useState(false);
   const captchaRef = useRef(null);
 
-  const setField = (field) => (e) => setFormData((prev) => ({ ...prev, [field]: e.target.value }));
+  const setField = (field) => (e) =>
+    setFormData((prev) => ({ ...prev, [field]: e.target.value }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -53,29 +58,42 @@ export default function Contact() {
   };
 
   return (
-    <section id="contact" ref={ref} className="fade-in py-20 px-6">
+    <section id="contact" ref={ref} className="fade-in px-6 py-20">
       <div className="mx-auto max-w-lg">
         <h2 className="mb-8 text-center text-3xl font-semibold">Contact</h2>
 
         {config.phone && (
           <p className="mb-6 text-center">
             Call or text:{' '}
-            <a href={`tel:${config.phone}`} className="underline hover:text-primary">
-              {config.phone.replace(/(\d)(\d{3})(\d{3})(\d{4})/, '+$1 ($2) $3-$4')}
+            <a
+              href={`tel:${config.phone}`}
+              className="hover:text-primary underline"
+            >
+              {config.phone.replace(
+                /(\d)(\d{3})(\d{3})(\d{4})/,
+                '+$1 ($2) $3-$4',
+              )}
             </a>
           </p>
         )}
 
         {status === 'success' && (
-          <p className="mb-4 text-center font-semibold text-green-600">Your message was sent!</p>
+          <p className="mb-4 text-center font-semibold text-green-600">
+            Your message was sent!
+          </p>
         )}
         {errorMessage && (
-          <p className="mb-4 text-center font-semibold text-red-600" role="alert">{errorMessage}</p>
+          <p
+            className="mb-4 text-center font-semibold text-red-600"
+            role="alert"
+          >
+            {errorMessage}
+          </p>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <label className="block">
-            <span className="text-sm font-medium">Full Name</span>
+            <span className="text-base font-medium">Full Name</span>
             <input
               type="text"
               name="name"
@@ -83,12 +101,12 @@ export default function Contact() {
               onChange={setField('name')}
               autoComplete="name"
               required
-              className="mt-1 w-full rounded border border-primary/40 px-4 py-2 text-text focus:border-primary focus:outline-none"
+              className="border-primary/40 text-text focus:border-primary mt-1 w-full rounded border px-4 py-2 focus:outline-none"
             />
           </label>
 
           <label className="block">
-            <span className="text-sm font-medium">Email</span>
+            <span className="text-base font-medium">Email</span>
             <input
               type="email"
               name="email"
@@ -96,19 +114,19 @@ export default function Contact() {
               onChange={setField('email')}
               autoComplete="email"
               required
-              className="mt-1 w-full rounded border border-primary/40 px-4 py-2 text-text focus:border-primary focus:outline-none"
+              className="border-primary/40 text-text focus:border-primary mt-1 w-full rounded border px-4 py-2 focus:outline-none"
             />
           </label>
 
           <label className="block">
-            <span className="text-sm font-medium">Message</span>
+            <span className="text-base font-medium">Message</span>
             <textarea
               name="message"
               value={formData.message}
               onChange={setField('message')}
               rows="4"
               required
-              className="mt-1 w-full rounded border border-primary/40 px-4 py-2 text-text focus:border-primary focus:outline-none"
+              className="border-primary/40 text-text focus:border-primary mt-1 w-full rounded border px-4 py-2 focus:outline-none"
             />
           </label>
 
@@ -116,7 +134,10 @@ export default function Contact() {
             <ReCAPTCHA
               sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
               ref={captchaRef}
-              onChange={() => { setHasCaptchaToken(true); setErrorMessage(''); }}
+              onChange={() => {
+                setHasCaptchaToken(true);
+                setErrorMessage('');
+              }}
             />
           </div>
 
@@ -124,7 +145,7 @@ export default function Contact() {
             <button
               type="submit"
               disabled={status === 'submitting'}
-              className="w-full rounded bg-primary py-3 font-semibold text-text transition-colors hover:bg-primary/80 disabled:opacity-50"
+              className="bg-primary text-text hover:bg-primary/80 w-full rounded py-3 font-semibold transition-colors disabled:opacity-50"
             >
               {status === 'submitting' ? 'Sending...' : 'Send Message'}
             </button>

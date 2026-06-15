@@ -24,12 +24,14 @@ export default function Hero() {
         />
       ))}
       <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 text-center text-white">
-        <h1 className="text-4xl font-semibold md:text-6xl">{config.siteName}</h1>
+        <h1 className="text-4xl font-semibold md:text-6xl">
+          {config.siteName}
+        </h1>
         <p className="mt-4 text-lg md:text-2xl">{config.tagline}</p>
-        <p className="mt-2 text-sm md:text-lg">{config.location}</p>
+        <p className="mt-2 text-base md:text-lg">{config.location}</p>
         <a
           href={config.ctaLink}
-          className="mt-8 rounded-md bg-primary px-8 py-3 font-semibold text-text transition-transform hover:scale-105"
+          className="bg-primary text-text mt-8 rounded-md px-8 py-3 font-semibold transition-transform hover:scale-105"
         >
           {config.ctaText}
         </a>

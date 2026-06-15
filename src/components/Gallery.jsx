@@ -15,19 +15,21 @@ export default function Gallery() {
       : config.portfolio.filter((img) => img.category === activeCategory);
 
   return (
-    <section id="portfolio" ref={ref} className="fade-in py-20 px-6">
+    <section id="portfolio" ref={ref} className="fade-in px-6 py-20">
       <div className="mx-auto max-w-7xl">
-        <h2 className="mb-8 text-center text-3xl font-semibold">{config.portfolioHeading}</h2>
+        <h2 className="mb-8 text-center text-3xl font-semibold">
+          {config.portfolioHeading}
+        </h2>
 
         <div className="mb-8 flex flex-wrap justify-center gap-3">
           {config.portfolioCategories.map((cat) => (
             <button
               key={cat}
               onClick={() => setActiveCategory(cat)}
-              className={`rounded-full px-5 py-2 text-sm font-medium transition-colors ${
+              className={`rounded-full px-5 py-2 text-base font-medium transition-colors ${
                 activeCategory === cat
                   ? 'bg-primary text-text'
-                  : 'bg-transparent border border-primary/50 text-text hover:bg-primary/20'
+                  : 'border-primary/50 text-text hover:bg-primary/20 border bg-transparent'
               }`}
             >
               {cat}
@@ -40,7 +42,7 @@ export default function Gallery() {
             <button
               key={img.src}
               onClick={() => setLightboxIndex(i)}
-              className="overflow-hidden rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+              className="focus:ring-primary overflow-hidden rounded-lg focus:outline-none focus:ring-2"
             >
               <img
                 src={img.src}
