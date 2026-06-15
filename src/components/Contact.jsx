@@ -1,182 +1,136 @@
 import { useState, useRef } from 'react';
 import ReCAPTCHA from 'react-google-recaptcha';
+import config from '../config';
+import useFadeIn from '../hooks/useFadeIn';
 
-function Contact() {
-  const [success, setSuccess] = useState('');
-  const [error, setError] = useState('');
-  const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('');
-  const [message, setMessage] = useState('');
+export default function Contact() {
+  const ref = useFadeIn();
+  const [formData, setFormData] = useState({ name: '', email: '', message: '' });
+  const [status, setStatus] = useState('idle');
+  const [errorMessage, setErrorMessage] = useState('');
   const [hasCaptchaToken, setHasCaptchaToken] = useState(false);
-
-  const SECRET_KEY = '6LdYBxgdAAAAALsuzUelSW-rZlbD4e-y5XNLlmKq';
-
   const captchaRef = useRef(null);
+
+  const setField = (field) => (e) => setFormData((prev) => ({ ...prev, [field]: e.target.value }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const formDataObj = Object.fromEntries(new FormData(e.target).entries());
+    if (!/^[A-Za-z'.]+\s[A-Za-z'.]+/.test(formData.name)) {
+      return setErrorMessage('Please enter a valid full name.');
+    }
+    if (formData.message.length < 4) {
+      return setErrorMessage('Please enter a valid message.');
+    }
+    if (!hasCaptchaToken) {
+      return setErrorMessage('Please check the reCAPTCHA box.');
+    }
 
-    // data validation
-    const fullNameRegX =
-      /([A-Z]+([']|[\.])?([A-Z,a-z,\.]*))\s(([A-Z]|['])+[A-Z,a-z]*)([-\s](([A-Z]|['])+[A-Z,a-z]*)*)?/g;
+    setStatus('submitting');
+    setErrorMessage('');
+    const token = captchaRef.current.getValue();
+    captchaRef.current.reset();
 
-    if (fullNameRegX.test(formDataObj.name)) {
-      // setError("");
-      if (formDataObj.message.length > 3) {
-        // setError("");
-        if (hasCaptchaToken) {
-          const token = captchaRef.current.getValue(); // returns token from ReCaptcha component
+    try {
+      const res = await fetch(import.meta.env.VITE_CONTACT_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...formData, 'g-recaptcha-response': token }),
+      });
 
-          captchaRef.current.reset();
-
-          const raw = JSON.stringify({
-            ...formDataObj,
-            'g-recaptcha-response': token,
-          });
-
-          const options = {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: raw,
-          };
-
-          try {
-            const response = await fetch(
-              'https://6bdqrjta4g.execute-api.us-east-1.amazonaws.com/Prod',
-              options,
-            );
-
-            if (response.ok) {
-              // show success message
-              setSuccess('Your message was sent!');
-              setError('');
-
-              // reset form
-              setFullName('');
-              setEmail('');
-              setMessage('');
-              setHasCaptchaToken(false);
-
-              // const data = await response.json(); // the data is a message Id string, good for nothing
-            } else {
-              // show error message
-              setError(
-                'Sorry, something went wrong trying to send your message. The administrator has been informed. Please try again at a later time.',
-              );
-              console.log(response);
-            }
-          } catch (error) {
-            setError(
-              'Sorry, something went wrong trying to send your message. The administrator has been informed. Please try again at a later time.',
-            );
-          }
-        } else {
-          // the recaptcha was not checked
-          setError('Please check the recaptcha box.');
-        }
+      if (res.ok) {
+        setStatus('success');
+        setFormData({ name: '', email: '', message: '' });
+        setHasCaptchaToken(false);
       } else {
-        setError('Please enter a valid message.');
+        setStatus('error');
+        setErrorMessage('Something went wrong. Please try again later.');
       }
-    } else {
-      setError('Please enter a valid full name.');
+    } catch {
+      setStatus('error');
+      setErrorMessage('Something went wrong. Please try again later.');
     }
   };
 
-  function handleOnChange(value) {
-    setHasCaptchaToken(true);
-    setError('');
-  }
-
   return (
-    <div
-      id="contact"
-      className="md:text-md mx-auto my-5 grid max-w-xs grid-cols-1 content-start justify-items-center rounded-md border-4 border-[#E9C18D] text-center shadow-md"
-    >
-      <h2 className="my-3 text-2xl font-semibold">Contact Me!</h2>
+    <section id="contact" ref={ref} className="fade-in py-20 px-6">
+      <div className="mx-auto max-w-lg">
+        <h2 className="mb-8 text-center text-3xl font-semibold">Contact</h2>
 
-      <div className="">
-        {/* <!-- Contact form --> */}
-        <form id="contact-us-form" onSubmit={handleSubmit}>
-          {success.length > 0 && (
-            <h3 className="mb-3  text-center font-bold text-green-500">
-              {success}
-            </h3>
-          )}
-          {error.length > 0 && (
-            <h3 className="mb-3 text-center font-bold text-red-500">{error}</h3>
-          )}
+        {config.phone && (
+          <p className="mb-6 text-center">
+            Call or text:{' '}
+            <a href={`tel:${config.phone}`} className="underline hover:text-primary">
+              {config.phone.replace(/(\d)(\d{3})(\d{3})(\d{4})/, '+$1 ($2) $3-$4')}
+            </a>
+          </p>
+        )}
 
-          <label htmlFor="name">
-            <span className="block text-sm font-medium">Your Full Name</span>
+        {status === 'success' && (
+          <p className="mb-4 text-center font-semibold text-green-600">Your message was sent!</p>
+        )}
+        {errorMessage && (
+          <p className="mb-4 text-center font-semibold text-red-600" role="alert">{errorMessage}</p>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <label className="block">
+            <span className="text-sm font-medium">Full Name</span>
             <input
               type="text"
-              className="mb-3 text-center text-black"
-              id="name"
               name="name"
-              placeholder="Enter your full name"
+              value={formData.name}
+              onChange={setField('name')}
               autoComplete="name"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
+              required
+              className="mt-1 w-full rounded border border-primary/40 px-4 py-2 text-text focus:border-primary focus:outline-none"
             />
           </label>
 
-          <label htmlFor="email">
-            <span className="block text-sm font-medium">Your Email</span>
+          <label className="block">
+            <span className="text-sm font-medium">Email</span>
             <input
               type="email"
-              className="peer px-3 text-black"
               name="email"
-              id="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={formData.email}
+              onChange={setField('email')}
+              autoComplete="email"
+              required
+              className="mt-1 w-full rounded border border-primary/40 px-4 py-2 text-text focus:border-primary focus:outline-none"
             />
-            <p id="emailHelp" className="text-xs">
-              We don&apos;t share your email with anyone.
-            </p>
-            <p className="invisible mt-2 text-sm text-pink-600 peer-invalid:visible">
-              Please provide a valid email address.
-            </p>
           </label>
 
-          <label htmlFor="message">
-            <span className="block text-sm">Your message</span>
+          <label className="block">
+            <span className="text-sm font-medium">Message</span>
             <textarea
-              className="px-3 text-black"
-              id="message"
               name="message"
+              value={formData.message}
+              onChange={setField('message')}
               rows="4"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-            ></textarea>
+              required
+              className="mt-1 w-full rounded border border-primary/40 px-4 py-2 text-text focus:border-primary focus:outline-none"
+            />
           </label>
 
-          <div className="ml-3 block sm:inline-block">
+          <div className="flex justify-center">
             <ReCAPTCHA
-              sitekey={SECRET_KEY}
+              sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
               ref={captchaRef}
-              onChange={handleOnChange}
-              size="compact"
+              onChange={() => { setHasCaptchaToken(true); setErrorMessage(''); }}
             />
           </div>
 
-          <div>
+          {hasCaptchaToken && (
             <button
               type="submit"
-              id="submitBtn"
-              className="mb-3 animate-pulse rounded bg-white px-4 py-2 font-bold text-black hover:bg-gray-700 hover:text-white"
-              hidden={!hasCaptchaToken ? 'hidden' : ''}
+              disabled={status === 'submitting'}
+              className="w-full rounded bg-primary py-3 font-semibold text-text transition-colors hover:bg-primary/80 disabled:opacity-50"
             >
-              Send Message!
+              {status === 'submitting' ? 'Sending...' : 'Send Message'}
             </button>
-          </div>
+          )}
         </form>
       </div>
-    </div>
+    </section>
   );
 }
-
-export default Contact;
