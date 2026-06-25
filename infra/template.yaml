@@ -20,12 +20,25 @@ Globals:
       - arm64
 
 Resources:
+  SharpLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: sharp-layer
+      Description: Sharp image processing library
+      ContentUri: layers/sharp/
+      CompatibleRuntimes:
+        - nodejs20.x
+    Metadata:
+      BuildMethod: nodejs20.x
+
   UploadFunction:
     Type: AWS::Serverless::Function
     Properties:
       Handler: index.handler
       CodeUri: upload-handler/
       MemorySize: 512
+      Layers:
+        - !Ref SharpLayer
       Environment:
         Variables:
           ADMIN_PASSWORD_HASH: !Ref AdminPasswordHash
