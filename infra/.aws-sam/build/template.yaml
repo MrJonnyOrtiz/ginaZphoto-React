@@ -22,12 +22,9 @@ Resources:
     Properties:
       LayerName: sharp-layer
       Description: Sharp image processing library
-      ContentUri: SharpLayer
+      ContentUri: ../../layers/sharp
       CompatibleRuntimes:
       - nodejs20.x
-    Metadata:
-      BuildMethod: nodejs20.x
-      SamResourceId: SharpLayer
   UploadFunction:
     Type: AWS::Serverless::Function
     Properties:

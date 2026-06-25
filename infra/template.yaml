@@ -28,8 +28,6 @@ Resources:
       ContentUri: layers/sharp/
       CompatibleRuntimes:
         - nodejs20.x
-    Metadata:
-      BuildMethod: nodejs20.x
 
   UploadFunction:
     Type: AWS::Serverless::Function

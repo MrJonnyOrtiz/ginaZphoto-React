@@ -9,11 +9,4 @@ manifest_hash = ""
 packagetype = "Zip"
 functions = ["UploadFunction"]
 
-[layer_build_definitions.42bc5602-1121-4b16-b898-b8ecc6d58aa4]
-layer_name = "SharpLayer"
-codeuri = "/Users/jonnyortiz/Google Drive/PERSONAL/webDevGinaZphoto/ginazphoto.com-react/infra/layers/sharp"
-build_method = "nodejs20.x"
-compatible_runtimes = ["nodejs20.x"]
-architecture = "x86_64"
-manifest_hash = ""
-layer = "SharpLayer"
+[layer_build_definitions]
