@@ -398,11 +398,16 @@ export default defineConfig({
 ├── .gitignore
 ├── REQUIREMENTS.md
 ├── DESIGN.md
+├── TASKS.md
+├── infra/
+│   ├── template.yaml
+│   └── upload-handler/
+│       └── index.mjs
 ├── public/
-│   ├── favicon.ico
 │   ├── logo512.png
 │   ├── robots.txt
 │   ├── sitemap.xml
+│   ├── admin.html
 │   ├── ginaZphoto.webp
 │   ├── gz01.webp ... gz07.webp
 │   ├── fb.png
@@ -412,6 +417,8 @@ export default defineConfig({
     ├── App.jsx
     ├── main.jsx
     ├── index.css
+    ├── hooks/
+    │   └── useFadeIn.js
     └── components/
         ├── Navbar.jsx
         ├── Hero.jsx
@@ -422,3 +429,126 @@ export default defineConfig({
         ├── Contact.jsx
         └── Footer.jsx
 ```
+
+---
+
+## Admin Image Upload — Design
+
+### Data Flow
+
+```
+admin.html
+    │ POST /upload
+    │ Headers: { X-Admin-Password: <plaintext password> }
+    │ Body: multipart/form-data { image, alt, category }
+    ▼
+API Gateway (HTTP API, single POST route)
+    │
+    ▼
+Lambda (upload-handler)
+    │
+    ├── 1. Extract password from header
+    ├── 2. bcrypt.compare(password, process.env.ADMIN_PASSWORD_HASH)
+    │       → 401 if mismatch
+    ├── 3. Parse multipart body (image buffer, alt, category)
+    ├── 4. sharp(buffer).resize({ width: 1200, withoutEnlargement: true }).webp({ quality: 80 })
+    ├── 5. Get image metadata (width, height) from sharp
+    ├── 6. Generate key: uploads/{Date.now()}-{slugify(alt)}.webp
+    ├── 7. PutObject to S3 (ContentType: image/webp)
+    ├── 8. GetObject gallery.json from S3 (or [] if doesn't exist)
+    ├── 9. Append { src: '/{key}', alt, category, width, height }
+    ├── 10. PutObject gallery.json (Cache-Control: public, max-age=60)
+    └── 11. Return 200 { src, alt, category, width, height }
+```
+
+### Lambda Contract (`infra/upload-handler/index.mjs`)
+
+**Environment variables:**
+- `ADMIN_PASSWORD_HASH` — bcrypt hash of the admin password
+- `BUCKET_NAME` — S3 bucket (e.g., `ginazphoto.com`)
+
+**Input (API Gateway event):**
+- `headers['x-admin-password']` — plaintext password
+- `body` — base64-encoded multipart form data
+- `isBase64Encoded` — true
+
+**Output:**
+- `200` — `{ src, alt, category, width, height }`
+- `401` — `{ error: 'Unauthorized' }`
+- `400` — `{ error: '<validation message>' }`
+- `500` — `{ error: 'Upload failed' }`
+
+**Dependencies:**
+- `sharp` (via Lambda layer, linux-arm64)
+- `bcryptjs` (pure JS, no native bindings — bundled with function)
+- `@aws-sdk/client-s3` (available in Lambda runtime)
+- `busboy` (multipart parsing — bundled with function)
+
+### SAM Template Contract (`infra/template.yaml`)
+
+**Parameters:**
+- `AdminPasswordHash` (String, NoEcho) — bcrypt hash
+- `BucketName` (String, Default: ginazphoto.com)
+
+**Resources:**
+- `UploadFunction` — Lambda, arm64, Node 20, 512MB memory, 30s timeout
+- `UploadFunctionLayer` — sharp layer (pre-built for arm64)
+- `HttpApi` — API Gateway HTTP API
+- `UploadRoute` — POST /upload → UploadFunction
+- `UploadFunctionRole` — IAM role with s3:GetObject, s3:PutObject on bucket
+
+**Outputs:**
+- `ApiUrl` — the upload endpoint URL (used in admin.html and .env)
+
+### Admin Page Contract (`public/admin.html`)
+
+**State (in-page JS):**
+- `password` — stored in sessionStorage after entry
+- `uploading` — boolean, disables form during upload
+- `message` — success/error text
+
+**Behavior:**
+1. On load: check sessionStorage for password → show upload form or password prompt
+2. Password submit: store in sessionStorage, reveal upload form
+3. File select (input or drag-drop): show preview + metadata fields
+4. Upload submit: POST to API with `X-Admin-Password` header + FormData body
+5. On 401: clear sessionStorage, show password prompt again
+6. On success: show confirmation, reset form
+7. On error: show error message
+
+**UI elements:**
+- Password input + submit button
+- Drag-drop zone / file input (accept: image/*)
+- Alt text input (required)
+- Category dropdown (values from known categories)
+- Upload button
+- Status message area
+
+### Gallery.jsx Changes
+
+**Current:** reads `config.portfolio` statically
+
+**New behavior:**
+```jsx
+const [images, setImages] = useState(config.portfolio);
+
+useEffect(() => {
+  fetch('/gallery.json')
+    .then((res) => res.ok ? res.json() : Promise.reject())
+    .then((data) => { if (data.length > 0) setImages(data); })
+    .catch(() => {}); // silent fallback to config.portfolio
+}, []);
+```
+
+- If `gallery.json` exists and has entries → replaces static config
+- If fetch fails or returns empty → keeps `config.portfolio` as fallback
+- No loading spinner needed — static config renders immediately, dynamic data swaps in seamlessly
+
+### Security Considerations
+
+- Admin page URL is unlisted (not in nav, not in sitemap, not linked anywhere)
+- Password transmitted over HTTPS (API Gateway enforces TLS)
+- bcrypt comparison in Lambda prevents timing attacks
+- No file type trust — sharp will reject non-image buffers
+- S3 objects are public-read (served via CloudFront) — this is intentional for a portfolio
+- Lambda has minimal IAM permissions (only the one bucket, only Get/Put)

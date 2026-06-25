@@ -1,4 +1,4 @@
-import { useState, lazy, Suspense } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import config from '../config';
 import useFadeIn from '../hooks/useFadeIn';
 
@@ -6,13 +6,21 @@ const Lightbox = lazy(() => import('./Lightbox'));
 
 export default function Gallery() {
   const ref = useFadeIn();
+  const [images, setImages] = useState(config.portfolio);
   const [activeCategory, setActiveCategory] = useState('All');
   const [lightboxIndex, setLightboxIndex] = useState(null);
 
+  useEffect(() => {
+    fetch('/gallery.json')
+      .then((res) => (res.ok ? res.json() : Promise.reject()))
+      .then((data) => { if (data.length > 0) setImages(data); })
+      .catch(() => {});
+  }, []);
+
   const filteredImages =
     activeCategory === 'All'
-      ? config.portfolio
-      : config.portfolio.filter((img) => img.category === activeCategory);
+      ? images
+      : images.filter((img) => img.category === activeCategory);
 
   return (
     <section id="portfolio" ref={ref} className="fade-in px-6 py-20">

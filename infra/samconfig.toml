@@ -1,0 +1,13 @@
+version = 0.1
+
+[default.deploy.parameters]
+stack_name = "photo-admin-ginaz"
+resolve_s3 = true
+s3_prefix = "photo-admin-ginaz"
+region = "us-east-1"
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = "BucketName=\"ginazphoto.com\""
+image_repositories = []
+
+[default.global.parameters]
+region = "us-east-1"

@@ -298,10 +298,129 @@ VITE_CONTACT_API_URL=https://6bdqrjta4g.execute-api.us-east-1.amazonaws.com/Prod
 - Blog section
 - Client reviews/testimonials
 - Online booking integration
-- CMS for photographer self-managed updates
 - Dark mode
 - Multi-page routing
 - Touch/swipe in lightbox
+
+---
+
+## Admin Image Upload Feature
+
+### Overview
+
+Self-service image upload so the photographer can add new gallery photos without touching code, making git commits, or requesting developer help. Photos appear on the live site within 60 seconds of upload.
+
+### User Flow
+
+1. Photographer navigates to `https://ginazphoto.com/admin.html` (unlisted URL)
+2. Enters admin password
+3. Selects image(s) via file picker or drag-and-drop
+4. Fills in alt text and category for each image
+5. Clicks upload
+6. Lambda processes image (resize, convert to WebP), updates gallery manifest
+7. Gallery on live site picks up new images on next page load (≤60s cache)
+
+### Architecture
+
+```
+Admin Page (static HTML)
+    │ POST /upload (password in header, image + metadata in body)
+    ▼
+API Gateway (HTTP API)
+    │
+    ▼
+Lambda (arm64, Node 20)
+    ├── Validates password hash
+    ├── Resizes image to max 1200px wide (sharp)
+    ├── Converts to WebP (quality 80)
+    ├── Writes to S3: /uploads/{timestamp}-{slug}.webp
+    ├── Reads current gallery.json from S3
+    ├── Appends new image entry
+    ├── Writes updated gallery.json (Cache-Control: max-age=60)
+    └── Returns success + new image URL
+
+S3 Bucket (ginazphoto.com)
+    ├── /uploads/*.webp         ← processed images
+    └── /gallery.json           ← manifest (array of image objects)
+
+Gallery.jsx
+    └── On mount: fetch('/gallery.json'), merge with config.portfolio
+```
+
+### Authentication
+
+- **Server-side**: Lambda validates password by comparing bcrypt hash stored in Lambda env var (`ADMIN_PASSWORD_HASH`). Rejects with 401 if mismatch.
+- **Client-side**: Admin page prompts for password before showing upload form. This is UX-only — not a security boundary.
+- **Threat model**: Low. URL is unlisted, worst case = someone uploads a photo to a photography site. No sensitive data exposed.
+
+### Image Processing
+
+- Input: JPEG, PNG, or WebP (any size)
+- Output: WebP, max 1200px wide (maintains aspect ratio), quality 80
+- Filename: `{timestamp}-{slug}.webp` (slug from alt text)
+- `sharp` via Lambda layer built for `linux-arm64`
+
+### Gallery Manifest (`gallery.json`)
+
+```json
+[
+  { "src": "/uploads/1719340000-couples-outdoors.webp", "alt": "Couples session outdoors", "category": "Portraits", "width": 1200, "height": 800 }
+]
+```
+
+- Written to S3 bucket root with `Cache-Control: public, max-age=60`
+- No CloudFront invalidation needed — stale data resolves within 60 seconds
+- Gallery.jsx fetches this at runtime and merges/replaces static config entries
+
+### Infrastructure (SAM)
+
+```
+infra/
+├── template.yaml         ← API Gateway, Lambda, IAM role, Layer reference
+└── upload-handler/
+    └── index.mjs         ← Lambda code
+```
+
+Deployed via `sam build && sam deploy`. Parameters:
+- `AdminPasswordHash` (bcrypt hash, passed at deploy time)
+- `BucketName` (default: ginazphoto.com)
+
+### Admin Page (`public/admin.html`)
+
+- Standalone HTML + vanilla JS (no React, no build step)
+- Password prompt → stored in sessionStorage for the session
+- Drag-and-drop zone or file picker (accept: image/*)
+- Fields per image: alt text (required), category (dropdown from known categories)
+- Upload progress indicator
+- Success/error feedback
+- Minimal styling matching site theme
+
+### Gallery.jsx Changes
+
+- On mount: `fetch('/gallery.json')` → parse → set state
+- If fetch fails (404 or network error): fall back to `config.portfolio`
+- Merge strategy: `gallery.json` entries replace `config.portfolio` entirely (gallery.json is the source of truth once uploads begin)
+- No other component changes needed
+
+### Environment Variables
+
+```
+# .env (local dev)
+VITE_GALLERY_API_URL=https://{api-id}.execute-api.us-east-1.amazonaws.com/upload
+
+# Lambda env var (set via SAM)
+ADMIN_PASSWORD_HASH=$2b$10$...
+BUCKET_NAME=ginazphoto.com
+```
+
+### Success Criteria
+
+- [ ] Photographer can upload images without developer assistance
+- [ ] Uploaded images are auto-resized and converted to WebP
+- [ ] New images appear on live site within 60 seconds
+- [ ] Upload rejected without correct password (server-side)
+- [ ] Works on mobile (photographer may upload from phone)
+- [ ] SAM template is reusable across clients (parameterized bucket name)
 
 ## Success Criteria
 

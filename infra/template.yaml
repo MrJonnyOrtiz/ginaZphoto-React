@@ -1,0 +1,79 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Admin image upload/delete for photography portfolio
+
+Parameters:
+  AdminPasswordHash:
+    Type: String
+    NoEcho: true
+    Description: Bcrypt hash of the admin password
+  BucketName:
+    Type: String
+    Default: ginazphoto.com
+    Description: S3 bucket name (also serves the site)
+
+Globals:
+  Function:
+    Timeout: 30
+    Runtime: nodejs20.x
+    Architectures:
+      - arm64
+
+Resources:
+  UploadFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: index.handler
+      CodeUri: upload-handler/
+      MemorySize: 512
+      Environment:
+        Variables:
+          ADMIN_PASSWORD_HASH: !Ref AdminPasswordHash
+          BUCKET_NAME: !Ref BucketName
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:GetObject
+                - s3:PutObject
+                - s3:DeleteObject
+              Resource: !Sub arn:aws:s3:::${BucketName}/*
+      Events:
+        Upload:
+          Type: HttpApi
+          Properties:
+            Path: /upload
+            Method: POST
+            ApiId: !Ref HttpApi
+        Delete:
+          Type: HttpApi
+          Properties:
+            Path: /delete
+            Method: POST
+            ApiId: !Ref HttpApi
+        ListImages:
+          Type: HttpApi
+          Properties:
+            Path: /images
+            Method: GET
+            ApiId: !Ref HttpApi
+
+  HttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: $default
+      CorsConfiguration:
+        AllowOrigins:
+          - '*'
+        AllowMethods:
+          - GET
+          - POST
+          - OPTIONS
+        AllowHeaders:
+          - Content-Type
+          - X-Admin-Password
+
+Outputs:
+  ApiUrl:
+    Description: API base URL
+    Value: !Sub https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com

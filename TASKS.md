@@ -72,3 +72,31 @@
 - [ ] **8.6** Test navbar: scroll-aware styling, active section highlight, mobile menu open/close
 - [ ] **8.7** Verify no hardcoded secrets in source (`grep` for API keys/URLs)
 - [ ] **8.8** Verify config swap: change `config.js` values, confirm site reflects changes
+
+---
+
+## Phase 9: Admin Image Upload Feature
+
+### Infrastructure
+
+- [ ] **9.1** Create `infra/` directory
+- [ ] **9.2** Create `infra/template.yaml` — SAM template (HttpApi, Lambda, IAM role, Layer)
+- [ ] **9.3** Create `infra/upload-handler/index.mjs` — Lambda code (auth, resize, manifest update)
+- [ ] **9.4** Create `infra/upload-handler/package.json` — dependencies (bcryptjs, busboy)
+- [ ] **9.5** Generate admin password, create bcrypt hash, store in `.env`
+
+### Frontend
+
+- [ ] **9.6** Create `public/admin.html` — standalone upload page with drag-drop, password gate
+- [ ] **9.7** Update `src/components/Gallery.jsx` — fetch `/gallery.json` at runtime, fallback to config
+- [ ] **9.8** Add `VITE_GALLERY_API_URL` to `.env` and `.env.example`
+
+### Deploy & Test
+
+- [ ] **9.9** Run `sam build` in `infra/` — verify template is valid
+- [ ] **9.10** Run `sam deploy --guided` — deploy Lambda + API Gateway
+- [ ] **9.11** Update `.env` with actual API URL from deploy output
+- [ ] **9.12** Test: upload image via admin page → verify it appears in gallery.json
+- [ ] **9.13** Test: verify uploaded image renders in Gallery on site
+- [ ] **9.14** Test: upload with wrong password → verify 401 rejection
+- [ ] **9.15** Verify `npm run build` still passes

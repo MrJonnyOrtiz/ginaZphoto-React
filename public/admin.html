@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin — Photo Manager</title>
+    <meta name="robots" content="noindex, nofollow" />
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: system-ui, sans-serif;
+        background: #fff3e3;
+        color: #1a1a1a;
+        padding: 2rem;
+        max-width: 800px;
+        margin: 0 auto;
+      }
+      h1 {
+        margin-bottom: 1.5rem;
+      }
+      h2 {
+        margin: 2rem 0 1rem;
+      }
+      input,
+      select,
+      button {
+        font-size: 1rem;
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        border: 1px solid #ccc;
+      }
+      button {
+        background: #e9c18d;
+        border: none;
+        cursor: pointer;
+        font-weight: 600;
+      }
+      button:hover {
+        opacity: 0.85;
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .msg {
+        padding: 0.75rem;
+        border-radius: 6px;
+        margin: 1rem 0;
+      }
+      .msg.ok {
+        background: #d4edda;
+        color: #155724;
+      }
+      .msg.err {
+        background: #f8d7da;
+        color: #721c24;
+      }
+      #login,
+      #app {
+        display: none;
+      }
+      .drop {
+        border: 2px dashed #e9c18d;
+        border-radius: 8px;
+        padding: 3rem;
+        text-align: center;
+        margin: 1rem 0;
+        cursor: pointer;
+      }
+      .drop.over {
+        background: #fde8c8;
+      }
+      .preview {
+        max-width: 200px;
+        border-radius: 6px;
+        margin: 0.5rem 0;
+      }
+      .gallery {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+      }
+      .gallery-item {
+        position: relative;
+      }
+      .gallery-item img {
+        width: 100%;
+        aspect-ratio: 3/2;
+        object-fit: cover;
+        border-radius: 6px;
+      }
+      .gallery-item button {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        background: #dc3545;
+        color: white;
+        border-radius: 50%;
+        width: 28px;
+        height: 28px;
+        padding: 0;
+        font-size: 1.2rem;
+        line-height: 1;
+      }
+      .gallery-item p {
+        font-size: 0.75rem;
+        margin-top: 0.25rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>📷 Photo Manager</h1>
+
+    <div id="login">
+      <label
+        >Admin Password<br />
+        <input type="password" id="pwd" />
+      </label>
+      <button onclick="login()">Enter</button>
+      <div id="loginMsg"></div>
+    </div>
+
+    <div id="app">
+      <h2>Upload New Photo</h2>
+      <div
+        class="drop"
+        id="drop"
+        onclick="document.getElementById('file').click()"
+      >
+        Drop image here or click to select
+      </div>
+      <input type="file" id="file" accept="image/*" hidden />
+      <img id="preview" class="preview" hidden />
+
+      <label
+        >Alt Text (describe the photo)<br />
+        <input
+          type="text"
+          id="alt"
+          placeholder="e.g. Family session at the beach"
+          style="width: 100%"
+        /> </label
+      ><br /><br />
+
+      <label
+        >Category<br />
+        <select id="category"></select> </label
+      ><br /><br />
+
+      <button id="uploadBtn" onclick="upload()" disabled>Upload Photo</button>
+      <div id="uploadMsg"></div>
+
+      <h2>Current Gallery</h2>
+      <button onclick="loadGallery()">Refresh</button>
+      <div class="gallery" id="gallery"></div>
+    </div>
+
+    <script>
+      // ═══ CLIENT CONFIG — change these per deployment ═══
+      const API = 'https://xzubixmkng.execute-api.us-east-1.amazonaws.com'; // Set after SAM deploy, e.g. 'https://abc123.execute-api.us-east-1.amazonaws.com'
+      const CATEGORIES = ['Portraits', 'Families', 'Events']; // Must match config.portfolioCategories (minus 'All')
+      // ═══════════════════════════════════════════════════
+
+      let password = '';
+
+      function show(id) {
+        document.getElementById(id).style.display = 'block';
+      }
+      function hide(id) {
+        document.getElementById(id).style.display = 'none';
+      }
+      function msg(id, text, ok) {
+        const el = document.getElementById(id);
+        el.className = 'msg ' + (ok ? 'ok' : 'err');
+        el.textContent = text;
+      }
+
+      // Init
+      document.getElementById('category').innerHTML = CATEGORIES.map(
+        (c) => `<option value="${c}">${c}</option>`,
+      ).join('');
+      password = sessionStorage.getItem('adminPwd') || '';
+      if (password) {
+        show('app');
+        loadGallery();
+      } else {
+        show('login');
+      }
+
+      async function login() {
+        password = document.getElementById('pwd').value;
+        try {
+          const res = await fetch(API + '/images', {
+            headers: { 'X-Admin-Password': password },
+          });
+          if (res.ok) {
+            sessionStorage.setItem('adminPwd', password);
+            hide('login');
+            show('app');
+            loadGallery();
+          } else {
+            msg('loginMsg', 'Wrong password', false);
+          }
+        } catch {
+          msg('loginMsg', 'Cannot reach server', false);
+        }
+      }
+
+      // Drag and drop
+      const drop = document.getElementById('drop');
+      drop.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        drop.classList.add('over');
+      });
+      drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+      drop.addEventListener('drop', (e) => {
+        e.preventDefault();
+        drop.classList.remove('over');
+        handleFile(e.dataTransfer.files[0]);
+      });
+      document
+        .getElementById('file')
+        .addEventListener('change', (e) => handleFile(e.target.files[0]));
+
+      let selectedFile = null;
+      function handleFile(file) {
+        if (!file) return;
+        selectedFile = file;
+        const prev = document.getElementById('preview');
+        prev.src = URL.createObjectURL(file);
+        prev.hidden = false;
+        document.getElementById('uploadBtn').disabled = false;
+        drop.textContent = file.name;
+      }
+
+      async function upload() {
+        const alt = document.getElementById('alt').value.trim();
+        const category = document.getElementById('category').value;
+        if (!selectedFile)
+          return msg('uploadMsg', 'Select an image first', false);
+        if (!alt) return msg('uploadMsg', 'Alt text is required', false);
+
+        document.getElementById('uploadBtn').disabled = true;
+        const fd = new FormData();
+        fd.append('image', selectedFile);
+        fd.append('alt', alt);
+        fd.append('category', category);
+
+        try {
+          const res = await fetch(API + '/upload', {
+            method: 'POST',
+            headers: { 'X-Admin-Password': password },
+            body: fd,
+          });
+          if (res.status === 401) {
+            sessionStorage.removeItem('adminPwd');
+            hide('app');
+            show('login');
+            return;
+          }
+          if (res.ok) {
+            msg('uploadMsg', '✓ Photo uploaded!', true);
+            selectedFile = null;
+            document.getElementById('preview').hidden = true;
+            document.getElementById('alt').value = '';
+            document.getElementById('file').value = '';
+            drop.textContent = 'Drop image here or click to select';
+            loadGallery();
+          } else {
+            const data = await res.json();
+            msg('uploadMsg', data.error || 'Upload failed', false);
+          }
+        } catch {
+          msg('uploadMsg', 'Upload failed — check connection', false);
+        }
+        document.getElementById('uploadBtn').disabled = false;
+      }
+
+      async function loadGallery() {
+        try {
+          const res = await fetch(API + '/images', {
+            headers: { 'X-Admin-Password': password },
+          });
+          if (!res.ok) return;
+          const images = await res.json();
+          const el = document.getElementById('gallery');
+          if (images.length === 0) {
+            el.innerHTML = '<p>No photos yet.</p>';
+            return;
+          }
+          el.innerHTML = images
+            .map(
+              (img) => `
+          <div class="gallery-item">
+            <img src="${img.src}" alt="${img.alt}" />
+            <button onclick="remove('${img.src}')" title="Delete">✕</button>
+            <p>${img.alt} (${img.category})</p>
+          </div>
+        `,
+            )
+            .join('');
+        } catch {}
+      }
+
+      async function remove(src) {
+        if (!confirm('Delete this photo? This cannot be undone.')) return;
+        try {
+          const res = await fetch(API + '/delete', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Admin-Password': password,
+            },
+            body: JSON.stringify({ src }),
+          });
+          if (res.ok) loadGallery();
+          else alert('Failed to delete');
+        } catch {
+          alert('Failed to delete');
+        }
+      }
+    </script>
+  </body>
+</html>
