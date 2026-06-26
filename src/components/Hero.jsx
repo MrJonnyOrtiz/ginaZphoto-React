@@ -6,13 +6,19 @@ export default function Hero() {
   const [activeIndex, setActiveIndex] = useState(0);
 
   useEffect(() => {
-    fetch('/gallery.json')
-      .then((res) => (res.ok ? res.json() : Promise.reject()))
-      .then((data) => {
-        const featured = data.filter((img) => img.featured).map((img) => img.src);
-        if (featured.length > 0) setHeroImages(featured);
-      })
-      .catch(() => {});
+    const fetchFeatured = () => {
+      fetch('/gallery.json')
+        .then((res) => (res.ok ? res.json() : Promise.reject()))
+        .then((data) => {
+          const featured = data.filter((img) => img.featured).map((img) => img.src);
+          if (featured.length > 0) setHeroImages(featured);
+        })
+        .catch(() => {});
+    };
+    fetchFeatured();
+    const onVisible = () => { if (!document.hidden) fetchFeatured(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
   }, []);
 
   useEffect(() => {

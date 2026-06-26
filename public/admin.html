@@ -338,6 +338,7 @@
       }
 
       async function toggleFeatured(src, featured) {
+        document.querySelectorAll('.gallery-item button').forEach(b => b.disabled = true);
         try {
           const res = await fetch(API + '/feature', {
             method: 'POST',
@@ -345,7 +346,9 @@
             body: JSON.stringify({ src, featured }),
           });
           if (res.ok) loadGallery();
-        } catch {}
+        } catch {
+          document.querySelectorAll('.gallery-item button').forEach(b => b.disabled = false);
+        }
       }
 
       async function remove(src) {

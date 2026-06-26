@@ -11,10 +11,16 @@ export default function Gallery() {
   const [lightboxIndex, setLightboxIndex] = useState(null);
 
   useEffect(() => {
-    fetch('/gallery.json')
-      .then((res) => (res.ok ? res.json() : Promise.reject()))
-      .then((data) => { if (data.length > 0) setImages(data); })
-      .catch(() => {});
+    const fetchGallery = () => {
+      fetch('/gallery.json')
+        .then((res) => (res.ok ? res.json() : Promise.reject()))
+        .then((data) => { if (data.length > 0) setImages(data); })
+        .catch(() => {});
+    };
+    fetchGallery();
+    const onVisible = () => { if (!document.hidden) fetchGallery(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
   }, []);
 
   const filteredImages =
