@@ -100,3 +100,12 @@
 - [ ] **9.13** Test: verify uploaded image renders in Gallery on site
 - [ ] **9.14** Test: upload with wrong password → verify 401 rejection
 - [ ] **9.15** Verify `npm run build` still passes
+
+### Enhancements (Completed)
+
+- [x] **9.16** Featured toggle — POST /feature Lambda route + admin UI toggle + Hero.jsx fetches featured images
+- [x] **9.17** Delete capability — POST /delete Lambda route + admin UI delete button
+- [x] **9.18** Client-side image resize (max 2000px via Canvas API) before upload to avoid 413 errors
+- [x] **9.19** Gallery masonry layout — CSS columns for natural aspect ratio display
+- [x] **9.20** Lightbox portal fix — uses `createPortal` to render on `document.body`
+- [x] **9.21** CI exclude — `gallery.json` and `uploads/` excluded from S3 `--delete` sync

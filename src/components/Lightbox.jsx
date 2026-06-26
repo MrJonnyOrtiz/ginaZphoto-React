@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 
 export default function Lightbox({ images, startIndex, onClose }) {
   const [currentIndex, setCurrentIndex] = useState(startIndex);
@@ -29,9 +30,9 @@ export default function Lightbox({ images, startIndex, onClose }) {
     return () => window.removeEventListener('keydown', handleKey);
   }, [onClose]);
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/90"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/95"
       role="dialog"
       aria-modal="true"
       aria-label="Image lightbox"
@@ -49,7 +50,7 @@ export default function Lightbox({ images, startIndex, onClose }) {
         <img
           src={images[currentIndex].src}
           alt={images[currentIndex].alt}
-          className="max-h-[85vh] max-w-[85vw] object-contain"
+          className="max-h-[90vh] max-w-[90vw] object-contain"
         />
 
         <button
@@ -73,6 +74,7 @@ export default function Lightbox({ images, startIndex, onClose }) {
       <p className="absolute bottom-6 text-sm text-white/70">
         {currentIndex + 1} of {images.length}
       </p>
-    </div>
+    </div>,
+    document.body
   );
 }

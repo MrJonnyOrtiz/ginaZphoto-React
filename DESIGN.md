@@ -76,8 +76,11 @@ import { HelmetProvider, Helmet } from 'react-helmet-async';
 
 **State**:
 - `activeIndex` (number) — current image in crossfade rotation
+- `images` (array) — resolved hero images
 
 **Behavior**:
+- On mount: fetches `/gallery.json`, filters for entries with `featured: true`, uses their `src` values
+- Falls back to `config.heroImages` if fetch fails or no featured images exist
 - `useEffect` with `setInterval` (6s) to advance `activeIndex`
 - Images stacked via `absolute inset-0`, opacity transition on active
 - Hero images loaded eagerly (no `loading="lazy"`)
@@ -140,12 +143,14 @@ Each card: bordered container with `hover:border-primary` transition.
   <div class="flex gap-3 justify-center mb-8"> <!-- filter buttons -->
     {portfolioCategories.map → <button>}
   </div>
-  <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-    {filteredImages.map → <img aspect-[3/2] object-cover loading="lazy" width={} height={}>}
+  <div class="columns-2 md:columns-3 lg:columns-4 gap-4"> <!-- CSS columns masonry layout -->
+    {filteredImages.map → <img object-cover loading="lazy" width={} height={}>}
   </div>
   {lightboxIndex !== null && <Lightbox />}
 </section>
 ```
+
+**Note**: Gallery uses CSS columns masonry layout (not uniform grid) to display images at their natural aspect ratios.
 
 ---
 
@@ -165,6 +170,7 @@ Each card: bordered container with `hover:border-primary` transition.
 - Focus restore: on mount, capture `document.activeElement` in a ref. On unmount, return focus to that element (ensures keyboard users land back on the gallery thumbnail they clicked).
 - Focus trap: on mount, focus moves to close button. Tab/Shift+Tab cycle between close, prev, and next buttons only. No focus escapes to elements behind the overlay.
 - Loaded via `React.lazy()` + `<Suspense>` for code splitting
+- **Renders via `createPortal` onto `document.body`** to avoid z-index/overflow issues with parent containers
 
 **Layout**:
 ```
@@ -290,7 +296,7 @@ No prop drilling beyond Gallery → Lightbox (parent-child).
 | State library | None (useState) | App is simple, no cross-component state |
 | Routing | None (anchor scroll) | Single-page, no URL routing needed |
 | Image format | WebP only (no fallback) | Browser support is 97%+ in 2026 |
-| Gallery layout | Uniform cropped grid | Predictable, no JS layout calculation. `aspect-[3/2] object-cover` reserves layout space; config `width`/`height` used in Lightbox for uncropped display |
+| Gallery layout | CSS columns masonry | Displays images at natural aspect ratios without cropping; pure CSS, no JS layout calculation |
 | Lightbox loading | React.lazy + Suspense | Only loaded when user clicks an image |
 | Meta tags | react-helmet-async | Dynamic per-config, works with SPA |
 | Active nav detection | IntersectionObserver (threshold: 0.3, rootMargin: "-80px 0px 0px 0px") | Native API, offset accounts for fixed navbar height |
@@ -440,9 +446,17 @@ export default defineConfig({
 admin.html
     │ POST /upload
     │ Headers: { X-Admin-Password: <plaintext password> }
-    │ Body: multipart/form-data { image, alt, category }
+    │ Body: multipart/form-data { image, alt, category, featured }
+    │
+    │ POST /delete
+    │ Headers: { X-Admin-Password: <plaintext password> }
+    │ Body: JSON { src }
+    │
+    │ POST /feature
+    │ Headers: { X-Admin-Password: <plaintext password> }
+    │ Body: JSON { src, featured }
     ▼
-API Gateway (HTTP API, single POST route)
+API Gateway (HTTP API, POST routes: /upload, /delete, /feature)
     │
     ▼
 Lambda (upload-handler)
@@ -456,10 +470,14 @@ Lambda (upload-handler)
     ├── 6. Generate key: uploads/{Date.now()}-{slugify(alt)}.webp
     ├── 7. PutObject to S3 (ContentType: image/webp)
     ├── 8. GetObject gallery.json from S3 (or [] if doesn't exist)
-    ├── 9. Append { src: '/{key}', alt, category, width, height }
+    ├── 9. Append { src: '/{key}', alt, category, width, height, featured }
     ├── 10. PutObject gallery.json (Cache-Control: public, max-age=60)
     └── 11. Return 200 { src, alt, category, width, height }
 ```
+
+**Client-side resize**: Before upload, admin.html resizes images to max 2000px wide via Canvas API to avoid 413 payload errors from API Gateway.
+
+**Admin page category filter**: The admin gallery view includes a category filter dropdown to allow the photographer to view/manage images by category.
 
 ### Lambda Contract (`infra/upload-handler/index.mjs`)
 
@@ -478,6 +496,18 @@ Lambda (upload-handler)
 - `400` — `{ error: '<validation message>' }`
 - `500` — `{ error: 'Upload failed' }`
 
+**Additional Routes:**
+
+`POST /delete`:
+- Input: `{ src }` (JSON body)
+- Behavior: Removes image from S3 and from gallery.json
+- Output: `200` — `{ success: true }` | `401` | `500`
+
+`POST /feature`:
+- Input: `{ src, featured }` (JSON body)
+- Behavior: Updates `featured` field for matching entry in gallery.json
+- Output: `200` — `{ success: true }` | `401` | `500`
+
 **Dependencies:**
 - `sharp` (via Lambda layer, linux-arm64)
 - `bcryptjs` (pure JS, no native bindings — bundled with function)
@@ -495,7 +525,9 @@ Lambda (upload-handler)
 - `UploadFunctionLayer` — sharp layer (pre-built for arm64)
 - `HttpApi` — API Gateway HTTP API
 - `UploadRoute` — POST /upload → UploadFunction
-- `UploadFunctionRole` — IAM role with s3:GetObject, s3:PutObject on bucket
+- `DeleteRoute` — POST /delete → UploadFunction
+- `FeatureRoute` — POST /feature → UploadFunction
+- `UploadFunctionRole` — IAM role with s3:GetObject, s3:PutObject, s3:DeleteObject on bucket
 
 **Outputs:**
 - `ApiUrl` — the upload endpoint URL (used in admin.html and .env)

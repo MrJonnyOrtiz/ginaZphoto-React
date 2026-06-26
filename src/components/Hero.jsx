@@ -2,18 +2,29 @@ import { useState, useEffect } from 'react';
 import config from '../config';
 
 export default function Hero() {
+  const [heroImages, setHeroImages] = useState(config.heroImages);
   const [activeIndex, setActiveIndex] = useState(0);
 
   useEffect(() => {
+    fetch('/gallery.json')
+      .then((res) => (res.ok ? res.json() : Promise.reject()))
+      .then((data) => {
+        const featured = data.filter((img) => img.featured).map((img) => img.src);
+        if (featured.length > 0) setHeroImages(featured);
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
     const interval = setInterval(() => {
-      setActiveIndex((i) => (i + 1) % config.heroImages.length);
+      setActiveIndex((i) => (i + 1) % heroImages.length);
     }, 6000);
     return () => clearInterval(interval);
-  }, []);
+  }, [heroImages]);
 
   return (
     <section id="home" className="relative h-screen overflow-hidden">
-      {config.heroImages.map((src, i) => (
+      {heroImages.map((src, i) => (
         <img
           key={src}
           src={src}
@@ -24,9 +35,7 @@ export default function Hero() {
         />
       ))}
       <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 text-center text-white">
-        <h1 className="text-4xl font-semibold md:text-6xl">
-          {config.siteName}
-        </h1>
+        <h1 className="text-4xl font-semibold md:text-6xl">{config.siteName}</h1>
         <p className="mt-4 text-lg md:text-2xl">{config.tagline}</p>
         <p className="mt-2 text-base md:text-lg">{config.location}</p>
         <a

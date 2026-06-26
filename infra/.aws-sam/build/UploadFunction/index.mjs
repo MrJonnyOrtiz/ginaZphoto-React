@@ -19,6 +19,7 @@ export const handler = async (event) => {
   if (method === 'GET' && path === '/images') return handleList();
   if (method === 'POST' && path === '/upload') return handleUpload(event);
   if (method === 'POST' && path === '/delete') return handleDelete(event);
+  if (method === 'POST' && path === '/feature') return handleFeature(event);
 
   return respond(404, { error: 'Not found' });
 };
@@ -42,7 +43,7 @@ async function handleUpload(event) {
     CacheControl: 'public, max-age=31536000',
   }));
 
-  const entry = { src: `/${key}`, alt, category, width: metadata.width, height: metadata.height };
+  const entry = { src: `/${key}`, alt, category, width: metadata.width, height: metadata.height, featured: false };
   const manifest = await getManifest();
   manifest.push(entry);
   await putManifest(manifest);
@@ -63,6 +64,20 @@ async function handleDelete(event) {
   await putManifest(updated);
 
   return respond(200, { deleted: src });
+}
+
+async function handleFeature(event) {
+  const body = JSON.parse(event.isBase64Encoded ? Buffer.from(event.body, 'base64').toString() : event.body);
+  const { src, featured } = body;
+  if (!src) return respond(400, { error: 'Missing src' });
+
+  const manifest = await getManifest();
+  const entry = manifest.find((img) => img.src === src);
+  if (!entry) return respond(404, { error: 'Image not found' });
+  entry.featured = !!featured;
+  await putManifest(manifest);
+
+  return respond(200, { src, featured: entry.featured });
 }
 
 async function handleList() {

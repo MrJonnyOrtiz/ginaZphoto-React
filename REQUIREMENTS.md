@@ -315,10 +315,14 @@ Self-service image upload so the photographer can add new gallery photos without
 1. Photographer navigates to `https://ginazphoto.com/admin.html` (unlisted URL)
 2. Enters admin password
 3. Selects image(s) via file picker or drag-and-drop
-4. Fills in alt text and category for each image
-5. Clicks upload
-6. Lambda processes image (resize, convert to WebP), updates gallery manifest
-7. Gallery on live site picks up new images on next page load (≤60s cache)
+4. Client-side resize: images are resized to max 2000px (via Canvas API) before upload to avoid 413 payload errors
+5. Fills in alt text and category for each image
+6. Optionally marks image as "featured" (used in hero rotation)
+7. Clicks upload
+8. Lambda processes image (resize, convert to WebP), updates gallery manifest
+9. Gallery on live site picks up new images on next page load (≤60s cache)
+10. Photographer can delete images from the admin gallery view
+11. Photographer can toggle featured status on existing images
 
 ### Architecture
 
@@ -355,22 +359,29 @@ Gallery.jsx
 
 ### Image Processing
 
-- Input: JPEG, PNG, or WebP (any size)
-- Output: WebP, max 1200px wide (maintains aspect ratio), quality 80
-- Filename: `{timestamp}-{slug}.webp` (slug from alt text)
-- `sharp` via Lambda layer built for `linux-arm64`
+- **Client-side**: Before upload, images are resized to max 2000px wide using Canvas API to avoid 413 payload errors from API Gateway
+- **Server-side (Lambda)**:
+  - Input: JPEG, PNG, or WebP (any size)
+  - Output: WebP, max 1200px wide (maintains aspect ratio), quality 80
+  - Filename: `{timestamp}-{slug}.webp` (slug from alt text)
+  - `sharp` via Lambda layer built for `linux-arm64`
 
 ### Gallery Manifest (`gallery.json`)
 
 ```json
 [
-  { "src": "/uploads/1719340000-couples-outdoors.webp", "alt": "Couples session outdoors", "category": "Portraits", "width": 1200, "height": 800 }
+  { "src": "/uploads/1719340000-couples-outdoors.webp", "alt": "Couples session outdoors", "category": "Portraits", "width": 1200, "height": 800, "featured": false }
 ]
 ```
 
 - Written to S3 bucket root with `Cache-Control: public, max-age=60`
 - No CloudFront invalidation needed — stale data resolves within 60 seconds
 - Gallery.jsx fetches this at runtime and merges/replaces static config entries
+- `featured: true` entries are used by Hero.jsx for hero image rotation
+
+### Gallery Display
+
+- Gallery uses **CSS columns masonry layout** (not a uniform grid) to display images at natural aspect ratios
 
 ### Infrastructure (SAM)
 
@@ -421,6 +432,9 @@ BUCKET_NAME=ginazphoto.com
 - [ ] Upload rejected without correct password (server-side)
 - [ ] Works on mobile (photographer may upload from phone)
 - [ ] SAM template is reusable across clients (parameterized bucket name)
+- [ ] Photographer can delete images from admin panel
+- [ ] Photographer can mark images as featured for hero rotation
+- [ ] Client-side resize prevents 413 errors for large images
 
 ## Success Criteria
 

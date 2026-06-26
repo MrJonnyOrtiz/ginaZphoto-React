@@ -70,6 +70,13 @@ Resources:
             Method: GET
             ApiId:
               Ref: HttpApi
+        Feature:
+          Type: HttpApi
+          Properties:
+            Path: /feature
+            Method: POST
+            ApiId:
+              Ref: HttpApi
     Metadata:
       SamResourceId: UploadFunction
   HttpApi:

@@ -331,9 +331,21 @@
           <div class="gallery-item">
             <img src="${img.src}" alt="${img.alt}" />
             <button onclick="remove('${img.src}')" title="Delete">✕</button>
+            <button onclick="toggleFeatured('${img.src}', ${!img.featured})" title="${img.featured ? 'Remove from hero' : 'Add to hero'}" style="left:4px;right:auto;background:${img.featured ? '#E9C18D' : '#666'}">${img.featured ? '⭐' : '☆'}</button>
             <p>${img.alt} (${img.category})</p>
           </div>
         `).join('');
+      }
+
+      async function toggleFeatured(src, featured) {
+        try {
+          const res = await fetch(API + '/feature', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Admin-Password': password },
+            body: JSON.stringify({ src, featured }),
+          });
+          if (res.ok) loadGallery();
+        } catch {}
       }
 
       async function remove(src) {

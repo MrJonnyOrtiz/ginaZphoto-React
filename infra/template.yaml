@@ -68,6 +68,12 @@ Resources:
             Path: /images
             Method: GET
             ApiId: !Ref HttpApi
+        Feature:
+          Type: HttpApi
+          Properties:
+            Path: /feature
+            Method: POST
+            ApiId: !Ref HttpApi
 
   HttpApi:
     Type: AWS::Serverless::HttpApi
