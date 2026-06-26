@@ -1,402 +1,358 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Admin — Photo Manager</title>
-    <meta name="robots" content="noindex, nofollow" />
-    <style>
-      * {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
-      }
-      body {
-        font-family: system-ui, sans-serif;
-        background: #fff3e3;
-        color: #1a1a1a;
-        padding: 2rem;
-        max-width: 800px;
-        margin: 0 auto;
-      }
-      h1 {
-        margin-bottom: 1.5rem;
-      }
-      h2 {
-        margin: 2rem 0 1rem;
-      }
-      input,
-      select,
-      button {
-        font-size: 1rem;
-        padding: 0.5rem 1rem;
-        border-radius: 6px;
-        border: 1px solid #ccc;
-      }
-      button {
-        background: #e9c18d;
-        border: none;
-        cursor: pointer;
-        font-weight: 600;
-      }
-      button:hover {
-        opacity: 0.85;
-      }
-      button:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-      }
-      .msg {
-        padding: 0.75rem;
-        border-radius: 6px;
-        margin: 1rem 0;
-      }
-      .msg.ok {
-        background: #d4edda;
-        color: #155724;
-      }
-      .msg.err {
-        background: #f8d7da;
-        color: #721c24;
-      }
-      #login,
-      #app {
-        display: none;
-      }
-      .drop {
-        border: 2px dashed #e9c18d;
-        border-radius: 8px;
-        padding: 3rem;
-        text-align: center;
-        margin: 1rem 0;
-        cursor: pointer;
-      }
-      .drop.over {
-        background: #fde8c8;
-      }
-      .preview {
-        max-width: 200px;
-        border-radius: 6px;
-        margin: 0.5rem 0;
-      }
-      .gallery {
-        columns: 2;
-        column-gap: 1rem;
-        margin-top: 1rem;
-      }
-      .gallery-item {
-        break-inside: avoid;
-        margin-bottom: 1rem;
-        position: relative;
-      }
-      .gallery-item img {
-        width: 100%;
-        border-radius: 6px;
-        display: block;
-      }
-      .gallery-item button {
-        position: absolute;
-        top: 4px;
-        right: 4px;
-        background: #dc3545;
-        color: white;
-        border-radius: 50%;
-        width: 28px;
-        height: 28px;
-        padding: 0;
-        font-size: 1.2rem;
-        line-height: 1;
-      }
-      .gallery-item p {
-        font-size: 0.75rem;
-        margin-top: 0.25rem;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-    </style>
-  </head>
-  <body>
-    <h1>📷 Photo Manager</h1>
-  <a href="/" style="font-size:0.9rem;opacity:0.7">← Back to site</a>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin — Photo Manager</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, -apple-system, sans-serif; background: #f5f0e8; color: #1a1a1a; min-height: 100vh; }
 
-    <div id="login">
-      <label
-        >Admin Password<br />
-        <input type="password" id="pwd" />
-      </label>
-      <button onclick="login()">Enter</button>
+    .topbar { background: #1a1a1a; color: white; padding: 0.75rem 1.5rem; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; backdrop-filter: blur(8px); }
+    .topbar h1 { font-size: 1.1rem; font-weight: 600; display: flex; align-items: center; gap: 0.5rem; }
+    .topbar-right { display: flex; gap: 1rem; align-items: center; }
+    .topbar a { color: #E9C18D; text-decoration: none; font-size: 0.85rem; transition: opacity 0.2s; }
+    .topbar a:hover { opacity: 0.7; }
+    .topbar button { background: #333; color: #ccc; border: 1px solid #555; padding: 0.35rem 0.85rem; border-radius: 4px; cursor: pointer; font-size: 0.8rem; transition: background 0.2s; }
+    .topbar button:hover { background: #444; }
+
+    .container { max-width: 960px; margin: 0 auto; padding: 1.5rem; }
+    .card { background: white; border-radius: 12px; padding: 1.75rem; margin-bottom: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.06); transition: box-shadow 0.2s; }
+    .card h2 { font-size: 1rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 1.25rem; padding-bottom: 0.6rem; border-bottom: 2px solid #E9C18D; color: #333; }
+
+    input, select, button { font-size: 0.9rem; padding: 0.55rem 0.9rem; border-radius: 6px; border: 1px solid #ddd; outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
+    input:focus, select:focus { border-color: #E9C18D; box-shadow: 0 0 0 3px rgba(233,193,141,0.15); }
+    button { background: #E9C18D; border: none; cursor: pointer; font-weight: 600; transition: transform 0.1s, opacity 0.2s; }
+    button:hover { opacity: 0.85; }
+    button:active { transform: scale(0.97); }
+    button:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    .msg { padding: 0.6rem 0.8rem; border-radius: 6px; margin-top: 0.75rem; font-size: 0.85rem; }
+    .msg.ok { background: #d4edda; color: #155724; }
+    .msg.err { background: #f8d7da; color: #721c24; }
+
+    #login, #app { display: none; }
+
+    /* Upload form */
+    .upload-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+    @media (max-width: 600px) { .upload-grid { grid-template-columns: 1fr; } }
+
+    .drop { border: 2px dashed #d4c4a8; border-radius: 10px; padding: 2.5rem 1.5rem; text-align: center; cursor: pointer; background: #fdfaf5; transition: all 0.2s; color: #888; font-size: 0.9rem; }
+    .drop:hover { border-color: #E9C18D; background: #fffaf3; }
+    .drop.over { border-color: #E9C18D; background: #fde8c8; }
+    .drop.has-file { border-style: solid; border-color: #E9C18D; color: #333; }
+    .drop * { pointer-events: none; }
+
+    .preview { max-width: 180px; max-height: 140px; border-radius: 8px; margin: 0.75rem 0; object-fit: cover; }
+
+    .form-row { margin-bottom: 1rem; }
+    .form-row label { font-size: 0.8rem; font-weight: 600; display: block; margin-bottom: 0.35rem; color: #555; text-transform: uppercase; letter-spacing: 0.3px; }
+    .form-row input, .form-row select { width: 100%; }
+
+    .pwd-wrap { display: flex; gap: 0.5rem; align-items: center; width: 100%; }
+    .pwd-wrap input { flex: 1; min-width: 0; }
+    .pwd-wrap .toggle { background: none; border: none; cursor: pointer; font-size: 1.1rem; padding: 0.25rem; opacity: 0.4; flex-shrink: 0; }
+    .pwd-wrap .toggle:hover { opacity: 1; }
+
+    /* Gallery */
+    .gallery-header { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1rem; padding-bottom: 0.6rem; border-bottom: 2px solid #E9C18D; }
+    .gallery-header h2 { margin: 0; padding: 0; border: none; }
+    .gallery-header select { font-size: 0.8rem; padding: 0.35rem 0.6rem; }
+    .gallery-header button { font-size: 0.8rem; padding: 0.35rem 0.7rem; background: #eee; color: #333; border: 1px solid #ddd; }
+
+    .gallery { columns: 3; column-gap: 0.75rem; }
+    @media (max-width: 768px) { .gallery { columns: 2; } }
+    @media (max-width: 480px) { .gallery { columns: 1; } }
+
+    .gallery-item { break-inside: avoid; margin-bottom: 0.75rem; position: relative; border-radius: 8px; overflow: hidden; }
+    .gallery-item img { width: 100%; display: block; transition: transform 0.3s; }
+    .gallery-item:hover img { transform: scale(1.02); }
+    .gallery-item .actions { position: absolute; top: 0; left: 0; right: 0; padding: 6px 8px; display: flex; justify-content: space-between; }
+    .gallery-item .actions .del { opacity: 0; transition: opacity 0.2s; }
+    .gallery-item:hover .actions .del { opacity: 1; }
+    .gallery-item .actions button { width: 30px; height: 30px; border-radius: 50%; padding: 0; font-size: 1rem; line-height: 1; color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+    .gallery-item .caption { font-size: 0.72rem; padding: 0.4rem 0.5rem; background: #fafafa; color: #666; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* Login */
+    .login-card { max-width: 340px; margin: 6rem auto; text-align: center; }
+    .login-card h2 { border: none; margin-bottom: 0.5rem; }
+    .login-card p { font-size: 0.85rem; color: #888; margin-bottom: 1.5rem; }
+
+
+
+    /* Count badge */
+    .count { background: #E9C18D; color: #333; font-size: 0.75rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 10px; margin-left: 0.5rem; }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <h1>📷 Photo Manager</h1>
+    <div class="topbar-right">
+      <a href="/">← Back to site</a>
+      <button onclick="logout()" id="logoutBtn" style="display:none">Sign Out</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <div id="login" class="card login-card">
+      <h2>Welcome Back</h2>
+      <p>Enter your admin password to continue.</p>
+      <div class="form-row">
+        <div class="pwd-wrap">
+          <input type="password" id="pwd" placeholder="Password" onkeydown="if(event.key==='Enter')login()" />
+          <button type="button" class="toggle" onclick="togglePwd('pwd',this)">👁</button>
+        </div>
+      </div>
+      <button onclick="login()" style="width:100%;margin-top:0.5rem">Sign In</button>
       <div id="loginMsg"></div>
     </div>
 
     <div id="app">
-      <h2>Upload New Photo</h2>
-      <div
-        class="drop"
-        id="drop"
-        onclick="document.getElementById('file').click()"
-      >
-        Drop image here or click to select
+      <!-- Upload Section -->
+      <div class="card">
+        <h2>Upload New Photo</h2>
+        <div class="drop" id="drop" onclick="document.getElementById('file').click()">
+          <span style="font-size:1.5rem;display:block;margin-bottom:0.4rem">+</span>
+          Drop image here or click to select
+        </div>
+        <input type="file" id="file" accept="image/*" hidden />
+        <img id="preview" class="preview" hidden />
+        <div class="upload-grid">
+          <div class="form-row" style="margin:0">
+            <label>Alt Text</label>
+            <input type="text" id="alt" placeholder="e.g. Family session at the beach" />
+          </div>
+          <div class="form-row" style="margin:0">
+            <label>Category</label>
+            <select id="category"></select>
+          </div>
+        </div>
+        <button id="uploadBtn" onclick="upload()" disabled>Upload Photo</button>
+        <div id="uploadMsg"></div>
       </div>
-      <input type="file" id="file" accept="image/*" hidden />
-      <img id="preview" class="preview" hidden />
 
-      <label
-        >Alt Text (describe the photo)<br />
-        <input
-          type="text"
-          id="alt"
-          placeholder="e.g. Family session at the beach"
-          style="width: 100%"
-        /> </label
-      ><br /><br />
+      <!-- Gallery Section -->
+      <div class="card">
+        <div class="gallery-header">
+          <h2>Gallery<span class="count" id="photoCount">0</span></h2>
+          <select id="filterCategory" onchange="filterGallery()"></select>
+          <button onclick="loadGallery()">↻ Refresh</button>
+        </div>
+        <div class="gallery" id="gallery"></div>
+      </div>
 
-      <label
-        >Category<br />
-        <select id="category"></select> </label
-      ><br /><br />
 
-      <button id="uploadBtn" onclick="upload()" disabled>Upload Photo</button>
-      <div id="uploadMsg"></div>
+    </div>
 
-      <h2>Current Gallery</h2>
-      <select id="filterCategory" onchange="filterGallery()"><option value="All">All</option></select>
-      <button onclick="loadGallery()">Refresh</button>
-      <div class="gallery" id="gallery"></div>
-
+    <div id="changePwd" class="card" style="display:none">
       <h2>Change Password</h2>
-      <label>New Password (min 8 characters)<br/>
-        <input type="password" id="newPwd" minlength="8" />
-      </label>
+      <div class="form-row">
+        <div class="pwd-wrap">
+          <input type="password" id="newPwd" minlength="8" placeholder="New password (min 8 chars)" />
+          <button type="button" class="toggle" onclick="togglePwd('newPwd',this)">👁</button>
+        </div>
+      </div>
       <button onclick="changePassword()">Update Password</button>
       <div id="pwdMsg"></div>
     </div>
+  </div>
 
-    <script>
-      // ═══ CLIENT CONFIG — change these per deployment ═══
-      const API = 'https://xzubixmkng.execute-api.us-east-1.amazonaws.com'; // Set after SAM deploy, e.g. 'https://abc123.execute-api.us-east-1.amazonaws.com'
-      const CATEGORIES = ['Portraits', 'Families', 'Events']; // Must match config.portfolioCategories (minus 'All')
-      // ═══════════════════════════════════════════════════
+  <script>
+    // ═══ CLIENT CONFIG — change these per deployment ═══
+    const API = 'https://xzubixmkng.execute-api.us-east-1.amazonaws.com';
+    const CATEGORIES = ['Portraits', 'Families', 'Events'];
+    // ═══════════════════════════════════════════════════
 
-      let password = '';
+    let password = '';
+    let allImages = [];
 
-      function show(id) {
-        document.getElementById(id).style.display = 'block';
-      }
-      function hide(id) {
-        document.getElementById(id).style.display = 'none';
-      }
-      function msg(id, text, ok) {
-        const el = document.getElementById(id);
-        el.className = 'msg ' + (ok ? 'ok' : 'err');
-        el.textContent = text;
-      }
+    function show(id) { document.getElementById(id).style.display = 'block'; }
+    function hide(id) { document.getElementById(id).style.display = 'none'; }
+    function togglePwd(id, btn) {
+      const input = document.getElementById(id);
+      const isHidden = input.type === 'password';
+      input.type = isHidden ? 'text' : 'password';
+      btn.textContent = isHidden ? '🙈' : '👁';
+    }
+    function msg(id, text, ok) {
+      const el = document.getElementById(id);
+      el.className = 'msg ' + (ok ? 'ok' : 'err');
+      el.textContent = text;
+    }
 
-      // Init
-      let allImages = [];
-      document.getElementById('category').innerHTML = CATEGORIES.map(
-        (c) => `<option value="${c}">${c}</option>`,
-      ).join('');
-      document.getElementById('filterCategory').innerHTML = '<option value="All">All</option>' + CATEGORIES.map(
-        (c) => `<option value="${c}">${c}</option>`,
-      ).join('');
-      password = sessionStorage.getItem('adminPwd') || '';
-      if (password) {
-        show('app');
-        loadGallery();
-      } else {
-        show('login');
-      }
+    // Init
+    document.getElementById('category').innerHTML = CATEGORIES.map(c => `<option value="${c}">${c}</option>`).join('');
+    document.getElementById('filterCategory').innerHTML = '<option value="All">All</option>' + CATEGORIES.map(c => `<option value="${c}">${c}</option>`).join('');
+    password = sessionStorage.getItem('adminPwd') || '';
+    if (password) { show('app'); show('changePwd'); document.getElementById('logoutBtn').style.display = 'inline-block'; loadGallery(); }
+    else { show('login'); }
 
-      async function login() {
-        password = document.getElementById('pwd').value;
-        try {
-          const res = await fetch(API + '/images', {
-            headers: { 'X-Admin-Password': password },
-          });
-          if (res.ok) {
-            sessionStorage.setItem('adminPwd', password);
-            hide('login');
-            show('app');
-            loadGallery();
-          } else {
-            msg('loginMsg', 'Wrong password', false);
-          }
-        } catch {
-          msg('loginMsg', 'Cannot reach server', false);
-        }
-      }
+    async function login() {
+      password = document.getElementById('pwd').value;
+      try {
+        const res = await fetch(API + '/images', { headers: { 'X-Admin-Password': password } });
+        if (res.ok) {
+          sessionStorage.setItem('adminPwd', password);
+          hide('login'); show('app'); show('changePwd');
+          document.getElementById('logoutBtn').style.display = 'inline-block';
+          loadGallery();
+        } else { msg('loginMsg', 'Wrong password', false); }
+      } catch { msg('loginMsg', 'Cannot reach server', false); }
+    }
 
-      // Drag and drop
-      const drop = document.getElementById('drop');
-      drop.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        drop.classList.add('over');
+    function logout() {
+      sessionStorage.removeItem('adminPwd');
+      password = '';
+      hide('app'); hide('changePwd');
+      document.getElementById('logoutBtn').style.display = 'none';
+      show('login');
+    }
+
+    // Drag and drop
+    const drop = document.getElementById('drop');
+    drop.addEventListener('dragover', (e) => { e.preventDefault(); drop.classList.add('over'); });
+    drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+    drop.addEventListener('drop', (e) => { e.preventDefault(); drop.classList.remove('over'); handleFile(e.dataTransfer.files[0]); });
+    document.getElementById('file').addEventListener('change', (e) => handleFile(e.target.files[0]));
+
+    let selectedFile = null;
+    function handleFile(file) {
+      if (!file) return;
+      selectedFile = file;
+      const prev = document.getElementById('preview');
+      prev.src = URL.createObjectURL(file);
+      prev.hidden = false;
+      document.getElementById('uploadBtn').disabled = false;
+      drop.innerHTML = `<strong>${file.name}</strong>`;
+      drop.classList.add('has-file');
+    }
+
+    function resizeImage(file, maxDim) {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+          let { width, height } = img;
+          if (width <= maxDim && height <= maxDim) { resolve(file); return; }
+          const scale = Math.min(maxDim / width, maxDim / height);
+          width = Math.round(width * scale);
+          height = Math.round(height * scale);
+          const canvas = document.createElement('canvas');
+          canvas.width = width; canvas.height = height;
+          canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+          canvas.toBlob((blob) => resolve(new File([blob], file.name, { type: 'image/jpeg' })), 'image/jpeg', 0.85);
+        };
+        img.src = URL.createObjectURL(file);
       });
-      drop.addEventListener('dragleave', () => drop.classList.remove('over'));
-      drop.addEventListener('drop', (e) => {
-        e.preventDefault();
-        drop.classList.remove('over');
-        handleFile(e.dataTransfer.files[0]);
-      });
-      document
-        .getElementById('file')
-        .addEventListener('change', (e) => handleFile(e.target.files[0]));
+    }
 
-      let selectedFile = null;
-      function handleFile(file) {
-        if (!file) return;
-        selectedFile = file;
-        const prev = document.getElementById('preview');
-        prev.src = URL.createObjectURL(file);
-        prev.hidden = false;
-        document.getElementById('uploadBtn').disabled = false;
-        drop.textContent = file.name;
-      }
+    async function upload() {
+      const alt = document.getElementById('alt').value.trim();
+      const category = document.getElementById('category').value;
+      if (!selectedFile) return msg('uploadMsg', 'Select an image first', false);
+      if (!alt) return msg('uploadMsg', 'Alt text is required', false);
 
-      function resizeImage(file, maxDim) {
-        return new Promise((resolve) => {
-          const img = new Image();
-          img.onload = () => {
-            let { width, height } = img;
-            if (width <= maxDim && height <= maxDim) { resolve(file); return; }
-            const scale = Math.min(maxDim / width, maxDim / height);
-            width = Math.round(width * scale);
-            height = Math.round(height * scale);
-            const canvas = document.createElement('canvas');
-            canvas.width = width;
-            canvas.height = height;
-            canvas.getContext('2d').drawImage(img, 0, 0, width, height);
-            canvas.toBlob((blob) => resolve(new File([blob], file.name, { type: 'image/jpeg' })), 'image/jpeg', 0.85);
-          };
-          img.src = URL.createObjectURL(file);
-        });
-      }
+      document.getElementById('uploadBtn').disabled = true;
+      msg('uploadMsg', 'Resizing and uploading…', true);
 
-      async function upload() {
-        const alt = document.getElementById('alt').value.trim();
-        const category = document.getElementById('category').value;
-        if (!selectedFile)
-          return msg('uploadMsg', 'Select an image first', false);
-        if (!alt) return msg('uploadMsg', 'Alt text is required', false);
+      const resized = await resizeImage(selectedFile, 2000);
+      const fd = new FormData();
+      fd.append('image', resized);
+      fd.append('alt', alt);
+      fd.append('category', category);
 
-        document.getElementById('uploadBtn').disabled = true;
-        msg('uploadMsg', 'Resizing and uploading...', true);
-
-        const resized = await resizeImage(selectedFile, 2000);
-        const fd = new FormData();
-        fd.append('image', resized);
-        fd.append('alt', alt);
-        fd.append('category', category);
-
-        try {
-          const res = await fetch(API + '/upload', {
-            method: 'POST',
-            headers: { 'X-Admin-Password': password },
-            body: fd,
-          });
-          if (res.status === 401) {
-            sessionStorage.removeItem('adminPwd');
-            hide('app');
-            show('login');
-            return;
-          }
-          if (res.ok) {
-            msg('uploadMsg', '✓ Photo uploaded!', true);
-            selectedFile = null;
-            document.getElementById('preview').hidden = true;
-            document.getElementById('alt').value = '';
-            document.getElementById('file').value = '';
-            drop.textContent = 'Drop image here or click to select';
-            loadGallery();
-          } else {
-            const data = await res.json();
-            msg('uploadMsg', data.error || 'Upload failed', false);
-          }
-        } catch {
-          msg('uploadMsg', 'Upload failed — check connection', false);
+      try {
+        const res = await fetch(API + '/upload', { method: 'POST', headers: { 'X-Admin-Password': password }, body: fd });
+        if (res.status === 401) { sessionStorage.removeItem('adminPwd'); hide('app'); show('login'); return; }
+        if (res.ok) {
+          msg('uploadMsg', '✓ Photo uploaded!', true);
+          selectedFile = null;
+          document.getElementById('preview').hidden = true;
+          document.getElementById('alt').value = '';
+          document.getElementById('file').value = '';
+          drop.innerHTML = '<span style="font-size:1.5rem;display:block;margin-bottom:0.4rem">+</span>Drop image here or click to select';
+          drop.classList.remove('has-file');
+          loadGallery();
+        } else {
+          const data = await res.json();
+          msg('uploadMsg', data.error || 'Upload failed', false);
         }
-        document.getElementById('uploadBtn').disabled = false;
-      }
+      } catch { msg('uploadMsg', 'Upload failed — check connection', false); }
+      document.getElementById('uploadBtn').disabled = false;
+    }
 
-      async function loadGallery() {
-        try {
-          const res = await fetch(API + '/images', {
-            headers: { 'X-Admin-Password': password },
-          });
-          if (!res.ok) return;
-          allImages = await res.json();
-          filterGallery();
-        } catch {}
-      }
+    async function loadGallery() {
+      try {
+        const res = await fetch(API + '/images', { headers: { 'X-Admin-Password': password } });
+        if (!res.ok) return;
+        allImages = await res.json();
+        filterGallery();
+      } catch {}
+    }
 
-      function filterGallery() {
-        const filter = document.getElementById('filterCategory').value;
-        const filtered = filter === 'All' ? allImages : allImages.filter(img => img.category === filter);
-        const el = document.getElementById('gallery');
-        if (filtered.length === 0) { el.innerHTML = '<p>No photos in this category.</p>'; return; }
-        el.innerHTML = filtered.map((img) => `
-          <div class="gallery-item">
-            <img src="${img.src}" alt="${img.alt}" />
-            <button onclick="remove('${img.src}')" title="Delete">✕</button>
-            <button onclick="toggleFeatured('${img.src}', ${!img.featured})" title="${img.featured ? 'Remove from hero' : 'Add to hero'}" style="left:4px;right:auto;background:${img.featured ? '#E9C18D' : '#666'}">${img.featured ? '⭐' : '☆'}</button>
-            <p>${img.alt} (${img.category})</p>
+    function filterGallery() {
+      const filter = document.getElementById('filterCategory').value;
+      const filtered = filter === 'All' ? allImages : allImages.filter(img => img.category === filter);
+      document.getElementById('photoCount').textContent = filtered.length;
+      const el = document.getElementById('gallery');
+      if (filtered.length === 0) { el.innerHTML = '<p style="opacity:0.4;padding:3rem;text-align:center;column-span:all">No photos in this category.</p>'; return; }
+      el.innerHTML = filtered.map((img) => `
+        <div class="gallery-item">
+          <img src="${img.src}" alt="${img.alt}" loading="lazy" />
+          <div class="actions">
+            <button onclick="toggleFeatured('${img.src}', ${!img.featured})" title="${img.featured ? 'Remove from hero' : 'Add to hero'}" style="background:${img.featured ? '#E9C18D' : 'rgba(0,0,0,0.5)'}">${img.featured ? '⭐' : '☆'}</button>
+            <button class="del" onclick="remove('${img.src}')" title="Delete" style="background:#dc3545">✕</button>
           </div>
-        `).join('');
-      }
+          <div class="caption">${img.alt} · ${img.category}</div>
+        </div>
+      `).join('');
+    }
 
-      async function toggleFeatured(src, featured) {
-        document.querySelectorAll('.gallery-item button').forEach(b => b.disabled = true);
-        try {
-          const res = await fetch(API + '/feature', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-Admin-Password': password },
-            body: JSON.stringify({ src, featured }),
-          });
-          if (res.ok) loadGallery();
-        } catch {
-          document.querySelectorAll('.gallery-item button').forEach(b => b.disabled = false);
+    async function toggleFeatured(src, featured) {
+      document.querySelectorAll('.gallery-item button').forEach(b => b.disabled = true);
+      try {
+        const res = await fetch(API + '/feature', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Admin-Password': password },
+          body: JSON.stringify({ src, featured }),
+        });
+        if (res.ok) loadGallery();
+      } catch { document.querySelectorAll('.gallery-item button').forEach(b => b.disabled = false); }
+    }
+
+    async function remove(src) {
+      if (!confirm('Delete this photo? This cannot be undone.')) return;
+      try {
+        const res = await fetch(API + '/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Admin-Password': password },
+          body: JSON.stringify({ src }),
+        });
+        if (res.ok) loadGallery();
+        else alert('Failed to delete');
+      } catch { alert('Failed to delete'); }
+    }
+
+    async function changePassword() {
+      const newPwd = document.getElementById('newPwd').value;
+      if (newPwd.length < 8) return msg('pwdMsg', 'Password must be at least 8 characters', false);
+      try {
+        const res = await fetch(API + '/change-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Admin-Password': password },
+          body: JSON.stringify({ newPassword: newPwd }),
+        });
+        if (res.ok) {
+          password = newPwd;
+          sessionStorage.setItem('adminPwd', newPwd);
+          document.getElementById('newPwd').value = '';
+          msg('pwdMsg', '✓ Password updated!', true);
+        } else {
+          const data = await res.json();
+          msg('pwdMsg', data.error || 'Failed to update', false);
         }
-      }
-
-      async function remove(src) {
-        if (!confirm('Delete this photo? This cannot be undone.')) return;
-        try {
-          const res = await fetch(API + '/delete', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-Admin-Password': password,
-            },
-            body: JSON.stringify({ src }),
-          });
-          if (res.ok) loadGallery();
-          else alert('Failed to delete');
-        } catch {
-          alert('Failed to delete');
-        }
-      }
-
-      async function changePassword() {
-        const newPwd = document.getElementById('newPwd').value;
-        if (newPwd.length < 8) return msg('pwdMsg', 'Password must be at least 8 characters', false);
-        try {
-          const res = await fetch(API + '/change-password', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-Admin-Password': password },
-            body: JSON.stringify({ newPassword: newPwd }),
-          });
-          if (res.ok) {
-            password = newPwd;
-            sessionStorage.setItem('adminPwd', newPwd);
-            document.getElementById('newPwd').value = '';
-            msg('pwdMsg', '✓ Password updated!', true);
-          } else {
-            const data = await res.json();
-            msg('pwdMsg', data.error || 'Failed to update', false);
-          }
-        } catch { msg('pwdMsg', 'Failed — check connection', false); }
-      }
-    </script>
-  </body>
+      } catch { msg('pwdMsg', 'Failed — check connection', false); }
+    }
+  </script>
+</body>
 </html>
