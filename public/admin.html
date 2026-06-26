@@ -246,6 +246,25 @@
         drop.textContent = file.name;
       }
 
+      function resizeImage(file, maxDim) {
+        return new Promise((resolve) => {
+          const img = new Image();
+          img.onload = () => {
+            let { width, height } = img;
+            if (width <= maxDim && height <= maxDim) { resolve(file); return; }
+            const scale = Math.min(maxDim / width, maxDim / height);
+            width = Math.round(width * scale);
+            height = Math.round(height * scale);
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+            canvas.toBlob((blob) => resolve(new File([blob], file.name, { type: 'image/jpeg' })), 'image/jpeg', 0.85);
+          };
+          img.src = URL.createObjectURL(file);
+        });
+      }
+
       async function upload() {
         const alt = document.getElementById('alt').value.trim();
         const category = document.getElementById('category').value;
@@ -254,8 +273,11 @@
         if (!alt) return msg('uploadMsg', 'Alt text is required', false);
 
         document.getElementById('uploadBtn').disabled = true;
+        msg('uploadMsg', 'Resizing and uploading...', true);
+
+        const resized = await resizeImage(selectedFile, 2000);
         const fd = new FormData();
-        fd.append('image', selectedFile);
+        fd.append('image', resized);
         fd.append('alt', alt);
         fd.append('category', category);
 
