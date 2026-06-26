@@ -7,7 +7,7 @@ export default function Hero() {
 
   useEffect(() => {
     const fetchFeatured = () => {
-      fetch('/gallery.json')
+      fetch('/gallery.json?t=' + Date.now())
         .then((res) => (res.ok ? res.json() : Promise.reject()))
         .then((data) => {
           const featured = data.filter((img) => img.featured).map((img) => img.src);
@@ -20,9 +20,11 @@ export default function Hero() {
     const onPageShow = (e) => { if (e.persisted) fetchFeatured(); };
     document.addEventListener('visibilitychange', onVisible);
     window.addEventListener('pageshow', onPageShow);
+    window.addEventListener('focus', fetchFeatured);
     return () => {
       document.removeEventListener('visibilitychange', onVisible);
       window.removeEventListener('pageshow', onPageShow);
+      window.removeEventListener('focus', fetchFeatured);
     };
   }, []);
 

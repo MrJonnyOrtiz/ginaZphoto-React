@@ -12,7 +12,7 @@ export default function Gallery() {
 
   useEffect(() => {
     const fetchGallery = () => {
-      fetch('/gallery.json')
+      fetch('/gallery.json?t=' + Date.now())
         .then((res) => (res.ok ? res.json() : Promise.reject()))
         .then((data) => { if (data.length > 0) setImages(data); })
         .catch(() => {});
@@ -22,9 +22,11 @@ export default function Gallery() {
     const onPageShow = (e) => { if (e.persisted) fetchGallery(); };
     document.addEventListener('visibilitychange', onVisible);
     window.addEventListener('pageshow', onPageShow);
+    window.addEventListener('focus', fetchGallery);
     return () => {
       document.removeEventListener('visibilitychange', onVisible);
       window.removeEventListener('pageshow', onPageShow);
+      window.removeEventListener('focus', fetchGallery);
     };
   }, []);
 
