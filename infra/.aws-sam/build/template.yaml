@@ -48,6 +48,12 @@ Resources:
           - s3:DeleteObject
           Resource:
             Fn::Sub: arn:aws:s3:::${BucketName}/*
+        - Effect: Allow
+          Action:
+          - lambda:GetFunctionConfiguration
+          - lambda:UpdateFunctionConfiguration
+          Resource:
+            Fn::Sub: arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${AWS::StackName}-*
       Events:
         Upload:
           Type: HttpApi
@@ -74,6 +80,13 @@ Resources:
           Type: HttpApi
           Properties:
             Path: /feature
+            Method: POST
+            ApiId:
+              Ref: HttpApi
+        ChangePassword:
+          Type: HttpApi
+          Properties:
+            Path: /change-password
             Method: POST
             ApiId:
               Ref: HttpApi

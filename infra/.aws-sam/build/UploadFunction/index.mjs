@@ -1,9 +1,11 @@
 import { S3Client, GetObjectCommand, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { LambdaClient, UpdateFunctionConfigurationCommand, GetFunctionConfigurationCommand } from '@aws-sdk/client-lambda';
 import bcrypt from 'bcryptjs';
 import Busboy from 'busboy';
 import sharp from 'sharp';
 
 const s3 = new S3Client({});
+const lambda = new LambdaClient({});
 const BUCKET = process.env.BUCKET_NAME;
 const MANIFEST_KEY = 'gallery.json';
 
@@ -20,6 +22,7 @@ export const handler = async (event) => {
   if (method === 'POST' && path === '/upload') return handleUpload(event);
   if (method === 'POST' && path === '/delete') return handleDelete(event);
   if (method === 'POST' && path === '/feature') return handleFeature(event);
+  if (method === 'POST' && path === '/change-password') return handleChangePassword(event);
 
   return respond(404, { error: 'Not found' });
 };
@@ -78,6 +81,27 @@ async function handleFeature(event) {
   await putManifest(manifest);
 
   return respond(200, { src, featured: entry.featured });
+}
+
+async function handleChangePassword(event) {
+  const body = JSON.parse(event.isBase64Encoded ? Buffer.from(event.body, 'base64').toString() : event.body);
+  const { newPassword } = body;
+  if (!newPassword || newPassword.length < 8) return respond(400, { error: 'Password must be at least 8 characters' });
+
+  const hash = bcrypt.hashSync(newPassword, 10);
+  const funcName = process.env.AWS_LAMBDA_FUNCTION_NAME;
+
+  const config = await lambda.send(new GetFunctionConfigurationCommand({ FunctionName: funcName }));
+  const env = config.Environment.Variables;
+  env.ADMIN_PASSWORD_HASH = hash;
+
+  await lambda.send(new UpdateFunctionConfigurationCommand({
+    FunctionName: funcName,
+    Environment: { Variables: env },
+  }));
+
+  process.env.ADMIN_PASSWORD_HASH = hash;
+  return respond(200, { message: 'Password updated' });
 }
 
 async function handleList() {

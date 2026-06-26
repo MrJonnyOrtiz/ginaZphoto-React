@@ -49,6 +49,11 @@ Resources:
                 - s3:PutObject
                 - s3:DeleteObject
               Resource: !Sub arn:aws:s3:::${BucketName}/*
+            - Effect: Allow
+              Action:
+                - lambda:GetFunctionConfiguration
+                - lambda:UpdateFunctionConfiguration
+              Resource: !Sub arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${AWS::StackName}-*
       Events:
         Upload:
           Type: HttpApi
@@ -72,6 +77,12 @@ Resources:
           Type: HttpApi
           Properties:
             Path: /feature
+            Method: POST
+            ApiId: !Ref HttpApi
+        ChangePassword:
+          Type: HttpApi
+          Properties:
+            Path: /change-password
             Method: POST
             ApiId: !Ref HttpApi
 

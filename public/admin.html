@@ -163,6 +163,13 @@
       <select id="filterCategory" onchange="filterGallery()"><option value="All">All</option></select>
       <button onclick="loadGallery()">Refresh</button>
       <div class="gallery" id="gallery"></div>
+
+      <h2>Change Password</h2>
+      <label>New Password (min 8 characters)<br/>
+        <input type="password" id="newPwd" minlength="8" />
+      </label>
+      <button onclick="changePassword()">Update Password</button>
+      <div id="pwdMsg"></div>
     </div>
 
     <script>
@@ -368,6 +375,27 @@
         } catch {
           alert('Failed to delete');
         }
+      }
+
+      async function changePassword() {
+        const newPwd = document.getElementById('newPwd').value;
+        if (newPwd.length < 8) return msg('pwdMsg', 'Password must be at least 8 characters', false);
+        try {
+          const res = await fetch(API + '/change-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Admin-Password': password },
+            body: JSON.stringify({ newPassword: newPwd }),
+          });
+          if (res.ok) {
+            password = newPwd;
+            sessionStorage.setItem('adminPwd', newPwd);
+            document.getElementById('newPwd').value = '';
+            msg('pwdMsg', '✓ Password updated!', true);
+          } else {
+            const data = await res.json();
+            msg('pwdMsg', data.error || 'Failed to update', false);
+          }
+        } catch { msg('pwdMsg', 'Failed — check connection', false); }
       }
     </script>
   </body>
