@@ -45,12 +45,12 @@ export default function Gallery() {
           ))}
         </div>
 
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+        <div className="columns-2 gap-4 md:columns-3 lg:columns-4">
           {filteredImages.map((img, i) => (
             <button
               key={img.src}
               onClick={() => setLightboxIndex(i)}
-              className="focus:ring-primary overflow-hidden rounded-lg focus:outline-none focus:ring-2"
+              className="focus:ring-primary mb-4 block w-full overflow-hidden rounded-lg focus:outline-none focus:ring-2"
             >
               <img
                 src={img.src}
@@ -58,7 +58,7 @@ export default function Gallery() {
                 width={img.width}
                 height={img.height}
                 loading="lazy"
-                className="aspect-[3/2] w-full object-cover transition-transform duration-300 hover:scale-105"
+                className="w-full object-cover transition-transform duration-300 hover:scale-105"
               />
             </button>
           ))}

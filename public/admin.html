@@ -80,19 +80,19 @@
         margin: 0.5rem 0;
       }
       .gallery {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-        gap: 1rem;
+        columns: 2;
+        column-gap: 1rem;
         margin-top: 1rem;
       }
       .gallery-item {
+        break-inside: avoid;
+        margin-bottom: 1rem;
         position: relative;
       }
       .gallery-item img {
         width: 100%;
-        aspect-ratio: 3/2;
-        object-fit: cover;
         border-radius: 6px;
+        display: block;
       }
       .gallery-item button {
         position: absolute;
@@ -159,6 +159,7 @@
       <div id="uploadMsg"></div>
 
       <h2>Current Gallery</h2>
+      <select id="filterCategory" onchange="filterGallery()"><option value="All">All</option></select>
       <button onclick="loadGallery()">Refresh</button>
       <div class="gallery" id="gallery"></div>
     </div>
@@ -184,7 +185,11 @@
       }
 
       // Init
+      let allImages = [];
       document.getElementById('category').innerHTML = CATEGORIES.map(
+        (c) => `<option value="${c}">${c}</option>`,
+      ).join('');
+      document.getElementById('filterCategory').innerHTML = '<option value="All">All</option>' + CATEGORIES.map(
         (c) => `<option value="${c}">${c}</option>`,
       ).join('');
       password = sessionStorage.getItem('adminPwd') || '';
@@ -290,24 +295,23 @@
             headers: { 'X-Admin-Password': password },
           });
           if (!res.ok) return;
-          const images = await res.json();
-          const el = document.getElementById('gallery');
-          if (images.length === 0) {
-            el.innerHTML = '<p>No photos yet.</p>';
-            return;
-          }
-          el.innerHTML = images
-            .map(
-              (img) => `
+          allImages = await res.json();
+          filterGallery();
+        } catch {}
+      }
+
+      function filterGallery() {
+        const filter = document.getElementById('filterCategory').value;
+        const filtered = filter === 'All' ? allImages : allImages.filter(img => img.category === filter);
+        const el = document.getElementById('gallery');
+        if (filtered.length === 0) { el.innerHTML = '<p>No photos in this category.</p>'; return; }
+        el.innerHTML = filtered.map((img) => `
           <div class="gallery-item">
             <img src="${img.src}" alt="${img.alt}" />
             <button onclick="remove('${img.src}')" title="Delete">✕</button>
             <p>${img.alt} (${img.category})</p>
           </div>
-        `,
-            )
-            .join('');
-        } catch {}
+        `).join('');
       }
 
       async function remove(src) {
