@@ -17,8 +17,13 @@ export default function Hero() {
     };
     fetchFeatured();
     const onVisible = () => { if (!document.hidden) fetchFeatured(); };
+    const onPageShow = (e) => { if (e.persisted) fetchFeatured(); };
     document.addEventListener('visibilitychange', onVisible);
-    return () => document.removeEventListener('visibilitychange', onVisible);
+    window.addEventListener('pageshow', onPageShow);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('pageshow', onPageShow);
+    };
   }, []);
 
   useEffect(() => {

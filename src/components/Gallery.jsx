@@ -19,8 +19,13 @@ export default function Gallery() {
     };
     fetchGallery();
     const onVisible = () => { if (!document.hidden) fetchGallery(); };
+    const onPageShow = (e) => { if (e.persisted) fetchGallery(); };
     document.addEventListener('visibilitychange', onVisible);
-    return () => document.removeEventListener('visibilitychange', onVisible);
+    window.addEventListener('pageshow', onPageShow);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('pageshow', onPageShow);
+    };
   }, []);
 
   const filteredImages =
