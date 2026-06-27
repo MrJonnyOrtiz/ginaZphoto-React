@@ -109,3 +109,14 @@
 - [x] **9.19** Gallery masonry layout — CSS columns for natural aspect ratio display
 - [x] **9.20** Lightbox portal fix — uses `createPortal` to render on `document.body`
 - [x] **9.21** CI exclude — `gallery.json` and `uploads/` excluded from S3 `--delete` sync
+
+### About Photo Management
+
+- [ ] **9.22** Add `POST /portrait` route to Lambda handler — parse image, resize, write to `portrait.webp` S3 key
+- [ ] **9.23** Add `GET /portrait` route to Lambda handler — HeadObject check, return src or 404
+- [ ] **9.24** Add `PortraitUploadRoute` and `PortraitGetRoute` to SAM template
+- [ ] **9.25** Add "About Photo" card to `admin.html` — current image display, drop zone, replace button
+- [ ] **9.26** Update `About.jsx` — fetch portrait from `GET /portrait`, fall back to `config.portrait`
+- [ ] **9.27** Test: upload portrait via admin → verify About section updates
+- [ ] **9.28** Test: verify fallback to `config.portrait` when no upload exists
+- [ ] **9.29** CI exclude — `portrait.webp` excluded from S3 `--delete` sync

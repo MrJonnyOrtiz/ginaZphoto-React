@@ -1,4 +1,4 @@
-import { S3Client, GetObjectCommand, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, GetObjectCommand, PutObjectCommand, DeleteObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
 import { LambdaClient, UpdateFunctionConfigurationCommand, GetFunctionConfigurationCommand } from '@aws-sdk/client-lambda';
 import bcrypt from 'bcryptjs';
 import Busboy from 'busboy';
@@ -8,12 +8,16 @@ const s3 = new S3Client({});
 const lambda = new LambdaClient({});
 const BUCKET = process.env.BUCKET_NAME;
 const MANIFEST_KEY = 'gallery.json';
+const PORTRAIT_KEY = 'portrait.webp';
 
 export const handler = async (event) => {
   const path = event.requestContext?.http?.path || event.rawPath;
   const method = event.requestContext?.http?.method || event.httpMethod;
 
-  // Auth check for all routes
+  // Public route — no auth
+  if (method === 'GET' && path === '/portrait') return handleGetPortrait();
+
+  // Auth check for all other routes
   const password = event.headers?.['x-admin-password'] || '';
   const valid = await bcrypt.compare(password, process.env.ADMIN_PASSWORD_HASH);
   if (!valid) return respond(401, { error: 'Unauthorized' });
@@ -22,6 +26,7 @@ export const handler = async (event) => {
   if (method === 'POST' && path === '/upload') return handleUpload(event);
   if (method === 'POST' && path === '/delete') return handleDelete(event);
   if (method === 'POST' && path === '/feature') return handleFeature(event);
+  if (method === 'POST' && path === '/portrait') return handlePortraitUpload(event);
   if (method === 'POST' && path === '/change-password') return handleChangePassword(event);
 
   return respond(404, { error: 'Not found' });
@@ -102,6 +107,32 @@ async function handleChangePassword(event) {
 
   process.env.ADMIN_PASSWORD_HASH = hash;
   return respond(200, { message: 'Password updated' });
+}
+
+async function handlePortraitUpload(event) {
+  const { buffer } = await parseMultipart(event);
+  if (!buffer) return respond(400, { error: 'Missing image' });
+
+  const output = await sharp(buffer).resize({ width: 1200, withoutEnlargement: true }).webp({ quality: 80 }).toBuffer();
+
+  await s3.send(new PutObjectCommand({
+    Bucket: BUCKET,
+    Key: PORTRAIT_KEY,
+    Body: output,
+    ContentType: 'image/webp',
+    CacheControl: 'public, max-age=60',
+  }));
+
+  return respond(200, { src: `/${PORTRAIT_KEY}` });
+}
+
+async function handleGetPortrait() {
+  try {
+    await s3.send(new HeadObjectCommand({ Bucket: BUCKET, Key: PORTRAIT_KEY }));
+    return respond(200, { src: `/${PORTRAIT_KEY}` });
+  } catch {
+    return respond(404, { error: 'No portrait uploaded' });
+  }
 }
 
 async function handleList() {

@@ -85,6 +85,18 @@ Resources:
             Path: /change-password
             Method: POST
             ApiId: !Ref HttpApi
+        PortraitUpload:
+          Type: HttpApi
+          Properties:
+            Path: /portrait
+            Method: POST
+            ApiId: !Ref HttpApi
+        PortraitGet:
+          Type: HttpApi
+          Properties:
+            Path: /portrait
+            Method: GET
+            ApiId: !Ref HttpApi
 
   HttpApi:
     Type: AWS::Serverless::HttpApi

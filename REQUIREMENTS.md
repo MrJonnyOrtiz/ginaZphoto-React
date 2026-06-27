@@ -424,6 +424,38 @@ ADMIN_PASSWORD_HASH=$2b$10$...
 BUCKET_NAME=ginazphoto.com
 ```
 
+### About Photo Management
+
+The admin page includes the ability to replace the portrait/about photo used in the About section.
+
+#### User Flow
+
+1. Photographer sees current portrait in a dedicated "About Photo" card on the admin page
+2. Selects a new image via file picker or drag-and-drop
+3. Client-side resize (max 2000px) before upload
+4. Clicks "Replace Photo"
+5. Lambda processes image (resize to 1200px, convert to WebP), stores at dedicated S3 key (`portrait.webp`)
+6. Returns the public URL
+7. About section on live site fetches portrait URL from API on next load
+
+#### API Endpoints
+
+**`POST /portrait`**
+- Headers: `X-Admin-Password: <password>`
+- Body: multipart/form-data — field `image`
+- Response 200: `{ "src": "https://..." }`
+- Response 401: `{ "error": "Unauthorized" }`
+
+**`GET /portrait`**
+- No auth required (public)
+- Response 200: `{ "src": "https://..." }`
+- Response 404: no portrait uploaded yet — client uses `config.portrait` fallback
+
+#### Frontend Changes
+
+- `About.jsx` fetches portrait URL from `GET /portrait` on mount
+- Falls back to `config.portrait` if fetch fails (graceful degradation)
+
 ### Success Criteria
 
 - [ ] Photographer can upload images without developer assistance
@@ -435,6 +467,8 @@ BUCKET_NAME=ginazphoto.com
 - [ ] Photographer can delete images from admin panel
 - [ ] Photographer can mark images as featured for hero rotation
 - [ ] Client-side resize prevents 413 errors for large images
+- [ ] Photographer can replace the about/portrait photo from admin panel
+- [ ] About photo updates appear on live site within 60 seconds
 
 ## Success Criteria
 

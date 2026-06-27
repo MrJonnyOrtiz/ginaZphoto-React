@@ -584,3 +584,103 @@ useEffect(() => {
 - No file type trust — sharp will reject non-image buffers
 - S3 objects are public-read (served via CloudFront) — this is intentional for a portfolio
 - Lambda has minimal IAM permissions (only the one bucket, only Get/Put)
+
+---
+
+## About Photo Management — Design
+
+### Data Flow
+
+```
+admin.html ("About Photo" card)
+    │ POST /portrait
+    │ Headers: { X-Admin-Password: <plaintext password> }
+    │ Body: multipart/form-data { image }
+    ▼
+API Gateway (HTTP API)
+    │
+    ▼
+Lambda (upload-handler)
+    ├── 1. Validate password (bcrypt)
+    ├── 2. Parse multipart body (image buffer)
+    ├── 3. sharp(buffer).resize({ width: 1200, withoutEnlargement: true }).webp({ quality: 80 })
+    ├── 4. PutObject to S3 key: portrait.webp (ContentType: image/webp, Cache-Control: max-age=60)
+    └── 5. Return 200 { src: '/portrait.webp' }
+
+About.jsx (frontend)
+    │ GET /portrait
+    ▼
+API Gateway → Lambda
+    └── GetObjectMetadata for portrait.webp → return { src } or 404
+```
+
+### Lambda Changes
+
+Two new routes added to the existing `upload-handler/index.mjs`:
+
+**`POST /portrait`**:
+- Same auth flow as other routes
+- Parses multipart body, extracts single image
+- Resizes with sharp (1200px max width, WebP quality 80)
+- Writes to fixed S3 key `portrait.webp` (overwrites previous)
+- Sets `Cache-Control: public, max-age=60`
+- Returns `{ src: '/portrait.webp' }`
+
+**`GET /portrait`**:
+- No auth required
+- Checks if `portrait.webp` exists in S3 (HeadObject)
+- If exists: returns `{ src: '/portrait.webp' }`
+- If not: returns 404
+
+### SAM Template Changes
+
+Add two routes to existing HttpApi:
+- `PortraitUploadRoute` — POST /portrait → UploadFunction
+- `PortraitGetRoute` — GET /portrait → UploadFunction
+
+No new Lambda functions needed — same handler, new route paths.
+
+### Admin UI Changes (`public/admin.html`)
+
+New card between Upload and Gallery cards:
+
+```
+┌─────────────────────────────────┐
+│ ABOUT PHOTO                     │
+├─────────────────────────────────┤
+│  ┌──────────┐  ┌─────────────┐ │
+│  │ current  │  │  Drop zone  │ │
+│  │ portrait │  │  or click   │ │
+│  │  image   │  │  to select  │ │
+│  └──────────┘  └─────────────┘ │
+│                                 │
+│  [Replace Photo]                │
+│  ✓ Photo updated!               │
+└─────────────────────────────────┘
+```
+
+**State**: Reuses existing `password` from sessionStorage. New local state for preview/upload status.
+
+**Behavior**:
+1. On app load (after auth): fetches `GET /portrait` to display current photo, falls back to `/ginaZphoto.webp`
+2. File select/drop: shows preview
+3. "Replace Photo" click: client-side resize (2000px max), POST /portrait with FormData
+4. On success: updates displayed image, shows confirmation
+5. On 401: redirects to login
+
+### About.jsx Changes
+
+```jsx
+const [portrait, setPortrait] = useState(config.portrait);
+
+useEffect(() => {
+  fetch(`${API}/portrait`)
+    .then(res => res.ok ? res.json() : Promise.reject())
+    .then(data => setPortrait(data.src))
+    .catch(() => {}); // keep config.portrait fallback
+}, []);
+```
+
+- Renders immediately with `config.portrait` (no loading flash)
+- Swaps to API-provided URL if available
+- No loading state needed — static fallback is seamless

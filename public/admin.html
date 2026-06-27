@@ -132,6 +132,24 @@
         <div id="uploadMsg"></div>
       </div>
 
+      <!-- About Photo Section -->
+      <div class="card">
+        <h2>About Photo</h2>
+        <div style="display:flex;gap:1.5rem;align-items:flex-start;flex-wrap:wrap">
+          <img id="portraitPreview" src="/ginaZphoto.webp" alt="Current portrait" style="width:160px;border-radius:8px;object-fit:cover" />
+          <div style="flex:1;min-width:200px">
+            <div class="drop" id="portraitDrop" onclick="document.getElementById('portraitFile').click()">
+              <span style="font-size:1.5rem;display:block;margin-bottom:0.4rem">+</span>
+              Drop new portrait or click to select
+            </div>
+            <input type="file" id="portraitFile" accept="image/*" hidden />
+            <img id="portraitNewPreview" class="preview" hidden />
+            <button id="portraitBtn" onclick="uploadPortrait()" disabled style="margin-top:0.75rem">Replace Photo</button>
+            <div id="portraitMsg"></div>
+          </div>
+        </div>
+      </div>
+
       <!-- Gallery Section -->
       <div class="card">
         <div class="gallery-header">
@@ -185,7 +203,7 @@
     document.getElementById('category').innerHTML = CATEGORIES.map(c => `<option value="${c}">${c}</option>`).join('');
     document.getElementById('filterCategory').innerHTML = '<option value="All">All</option>' + CATEGORIES.map(c => `<option value="${c}">${c}</option>`).join('');
     password = sessionStorage.getItem('adminPwd') || '';
-    if (password) { show('app'); show('changePwd'); document.getElementById('logoutBtn').style.display = 'inline-block'; loadGallery(); }
+    if (password) { show('app'); show('changePwd'); document.getElementById('logoutBtn').style.display = 'inline-block'; loadGallery(); loadPortrait(); }
     else { show('login'); }
 
     async function login() {
@@ -197,6 +215,7 @@
           hide('login'); show('app'); show('changePwd');
           document.getElementById('logoutBtn').style.display = 'inline-block';
           loadGallery();
+          loadPortrait();
         } else { msg('loginMsg', 'Wrong password', false); }
       } catch { msg('loginMsg', 'Cannot reach server', false); }
     }
@@ -352,6 +371,63 @@
           msg('pwdMsg', data.error || 'Failed to update', false);
         }
       } catch { msg('pwdMsg', 'Failed — check connection', false); }
+    }
+
+    // ═══ Portrait / About Photo ═══
+    const portraitDrop = document.getElementById('portraitDrop');
+    portraitDrop.addEventListener('dragover', (e) => { e.preventDefault(); portraitDrop.classList.add('over'); });
+    portraitDrop.addEventListener('dragleave', () => portraitDrop.classList.remove('over'));
+    portraitDrop.addEventListener('drop', (e) => { e.preventDefault(); portraitDrop.classList.remove('over'); handlePortraitFile(e.dataTransfer.files[0]); });
+    document.getElementById('portraitFile').addEventListener('change', (e) => handlePortraitFile(e.target.files[0]));
+
+    let portraitFile = null;
+    function handlePortraitFile(file) {
+      if (!file) return;
+      portraitFile = file;
+      const prev = document.getElementById('portraitNewPreview');
+      prev.src = URL.createObjectURL(file);
+      prev.hidden = false;
+      document.getElementById('portraitBtn').disabled = false;
+      portraitDrop.innerHTML = `<strong>${file.name}</strong>`;
+      portraitDrop.classList.add('has-file');
+    }
+
+    async function loadPortrait() {
+      try {
+        const res = await fetch(API + '/portrait');
+        if (res.ok) {
+          const data = await res.json();
+          document.getElementById('portraitPreview').src = data.src + '?t=' + Date.now();
+        }
+      } catch {}
+    }
+
+    async function uploadPortrait() {
+      if (!portraitFile) return;
+      document.getElementById('portraitBtn').disabled = true;
+      msg('portraitMsg', 'Uploading…', true);
+
+      const resized = await resizeImage(portraitFile, 2000);
+      const fd = new FormData();
+      fd.append('image', resized);
+
+      try {
+        const res = await fetch(API + '/portrait', { method: 'POST', headers: { 'X-Admin-Password': password }, body: fd });
+        if (res.status === 401) { sessionStorage.removeItem('adminPwd'); hide('app'); show('login'); return; }
+        if (res.ok) {
+          msg('portraitMsg', '✓ Portrait updated!', true);
+          portraitFile = null;
+          document.getElementById('portraitNewPreview').hidden = true;
+          document.getElementById('portraitFile').value = '';
+          portraitDrop.innerHTML = '<span style="font-size:1.5rem;display:block;margin-bottom:0.4rem">+</span>Drop new portrait or click to select';
+          portraitDrop.classList.remove('has-file');
+          loadPortrait();
+        } else {
+          const data = await res.json();
+          msg('portraitMsg', data.error || 'Upload failed', false);
+        }
+      } catch { msg('portraitMsg', 'Upload failed — check connection', false); }
+      document.getElementById('portraitBtn').disabled = false;
     }
   </script>
 </body>
